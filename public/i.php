@@ -15,10 +15,11 @@ $bs = new \Crypto\Bot\BotStorage();
 $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
 $bot = new \Crypto\Bot\Bot();
 $bot->client = $hit;
-$bot->id = "BTCUSD-EXTREME";
-$bot->pairID = "BTCUSD";
-$bot->buyPercentage = 0.00005;
-$bot->sellPercentage = 0.0005;
+$bot->id = "EDOUSD-STATIC";
+$bot->pairID = "EDOUSD";
+$bot->buyPercentage = 0.02;
+$bot->sellPercentage = 0.02;
+$bot->value = 10;
 
 $bs->saveBot($bot);
 //$r = $bs->getBot('BTCUSD-01');
