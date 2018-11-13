@@ -18,6 +18,7 @@ class Order
     public $pairID;
     public $side;
     public $traded = 0;
+    public $status; // new, suspended, partiallyFilled, filled, canceled, expired
 
     public function init(array $data)
     {
@@ -26,6 +27,9 @@ class Order
         $this->side = $data['side'];
         $this->value = $data['quantity'];
         $this->price = $data['price'];
+        $this->status = $data['status'];
         $this->date =  new \DateTime($data['createdAt']);
+        $this->traded = $data['cumQuantity'];
+        return $this;
     }
 }

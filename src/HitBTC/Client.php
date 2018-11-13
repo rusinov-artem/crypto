@@ -93,12 +93,63 @@ Class Client{
     {
         $orders = $this->getActiveOrders();
 
-        foreach ($orders as $order)
+        foreach ($orders as $orderData)
         {
-            if($order['clientOrderId'] === $orderID) return true;
+            if($orderData['clientOrderId'] === $orderID) {
+                $order = new Order();
+                return $order->init($orderData);
+            }
         }
 
         return false;
+    }
+
+    public function getOrderStatus(Order &$order)
+    {
+        if($co = $this->checkOrderIsActive($order->id))
+        {
+            unset($order);
+            $order = $co;
+            return $order->status;
+        }
+
+        //Ордер либо полностью исполнен либо canceled;
+
+        $this->getOrderTrades($order);
+
+        if($order->traded >= $order->value)
+        {
+            $order->status = 'filled';
+        }
+        else
+        {
+            $order->status = 'canceled';
+        }
+
+        return $order->status;
+
+    }
+
+    public function getOrderTrades(Order &$order)
+    {
+        $trades = 0;
+
+        $this->getAccountTrades($order->pairID, function ($item) use ($order, &$trades)
+        {
+            $td = new \DateTime($item['timestamp']);
+            if($td < $order->date) return false;
+
+            if($item['clientOrderId'] === $order->id)
+            {
+                $trades += $item['quantity'];
+            }
+
+            return true;
+
+        });
+
+        return $order->traded = $trades;
+
     }
 
     public function chunker(callable $func, $method, $action, array $params,  $chunkSize = 100)
@@ -152,6 +203,18 @@ Class Client{
         return $this->request('GET', "public/orderbook/$pairID", ['limit'=>$limit]);
     }
 
+    public function getBestBidAsk($pairID)
+    {
+        $data = $this->getOrderBook($pairID);
+
+        $result = [
+          'bid' => current($data['bid']),
+          'ask' => current($data['ask']),
+        ];
+
+        return $result;
+    }
+
     public function getPairTrades($pairID, callable $func, $sort="DESC", $chunkSize=100)
     {
         $p =
@@ -187,6 +250,5 @@ Class Client{
 
         return json_decode((string)$response->getBody(), true);
     }
-
 
 }

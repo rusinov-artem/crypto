@@ -91,11 +91,6 @@ class EDOBot
         }
     }
 
-    public function createSellOrder()
-    {
-
-    }
-
     public function checkBuyOrder()
     {
         $this->log('We are gonna check buyOrder '.$this->buyOrder->id);
