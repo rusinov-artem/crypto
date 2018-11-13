@@ -21,6 +21,7 @@ while(1)
 
     foreach ($bots as $botID)
     {
+        var_dump($botID);
         $bot = $bs->getBot($botID);
         $bot->client = $hit;
         $bot->tick();
