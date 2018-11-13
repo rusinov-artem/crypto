@@ -1,0 +1,19 @@
+{
+    "name": "rusinovartem/crypto",
+    "authors": [
+        {
+            "name": "Rusinov Artem",
+            "email": "Rusinov_Artem@yahoo.com"
+        }
+    ],
+    "require": {
+        "guzzlehttp/guzzle": "^6.3",
+        "symfony/filesystem": "^4.1",
+        "symfony/finder": "^4.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Crypto\\": "src"
+        }
+    }
+}
