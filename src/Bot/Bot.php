@@ -18,6 +18,8 @@ class Bot
     public $buyPercentage = 0.005;
     public $sellPercentage = 0.0025;
 
+    public $value = 0.01;
+
     /**
      * @var Order
      */
@@ -47,7 +49,7 @@ class Bot
 
     public function getValue()
     {
-        return 0.01;
+        return $this->value;
     }
 
     public function getRoutes()
