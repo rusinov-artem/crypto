@@ -8,6 +8,9 @@
 
 namespace Crypto\HitBTC;
 
+use Crypto\Exchange\Pair;
+use Crypto\Exchange\PairLimit;
+
 Class Client{
 
     public $apiKey;
@@ -26,21 +29,34 @@ Class Client{
         $this->client = new \GuzzleHttp\Client();
     }
 
-    public function getPairs($pairID=null)
+    public function getPairs()
     {
-        if($pairID === null)
-            return $this->request("GET", 'public/symbol', []);
-
         $data = $this->request("GET", 'public/symbol', []);
 
+        $result = [];
         foreach ($data as $item)
         {
-            if($item['id'] == $pairID)
-                return $item;
+            $limit = new PairLimit();
+            $limit->lotSize = $item['quantityIncrement'];
+            $limit->priceTick = $item['tickSize'];
+            $limit->feeCurrency = $item['feeCurrency'];
+            $limit->takeLiquidityRate = $item['takeLiquidityRate'];
+            $limit->provideLiquidityRate = $item['provideLiquidityRate'];
+            $limit->pairID = $item['id'];
+
+            $pair = new Pair();
+            $pair->id = $item['id'];
+            $pair->baseCurrency = $item['baseCurrency'];
+            $pair->quoteCurrency = $item['quoteCurrency'];
+            $pair->limit = $limit;
+
+            $result[$pair->id] = $pair;
+
         }
 
-        return false;
+        return $result;
     }
+
 
     public function getBalance()
     {

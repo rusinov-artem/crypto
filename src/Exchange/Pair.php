@@ -8,7 +8,7 @@ class Pair
 {
     public $id;
     public $baseCurrency;
-    public $QuoteCurrency;
+    public $quoteCurrency;
 
     /**
      * @var PairLimit
