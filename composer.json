@@ -14,7 +14,8 @@
     },
     "autoload": {
         "psr-4": {
-            "Crypto\\": "src"
+            "Crypto\\": "src",
+            "Crypto\\Tests\\": "tests"
         }
     }
 }

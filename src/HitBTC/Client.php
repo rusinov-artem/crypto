@@ -144,7 +144,7 @@ Class Client{
      * @param Order $order
      * @return Order
      */
-    public function closeOrder(Order $order)
+    public function closeOrder(Order &$order)
     {
         $item = $this->request("DELETE", "order/{$order->id}", []);
 
@@ -155,10 +155,10 @@ Class Client{
         $order->value = $item['quantity'];
         $order->price = $item['price'];
         $order->date =  new \DateTime($item['createdAt']);
-        $order->status = $item['status'];
+        $order->status = 'canceled';
         $order->traded = $item['cumQuantity'];
 
-        return $item;
+        return $order;
 
 
     }
@@ -233,7 +233,7 @@ Class Client{
     {
         $trades = 0;
 
-        $this->getAccountTrades($order->pairID, function ($item) use ($order, &$trades)
+        $this->chunkAccountTrades($order->pairID, function ($item) use ($order, &$trades)
         {
             /**
              * @var $item Trade
@@ -285,7 +285,7 @@ Class Client{
         return $counter;
     }
 
-    public function getAccountTrades($pairID, callable $func, $sort="DESC", $chunkSize=100)
+    public function chunkAccountTrades($pairID, callable $func, $sort="DESC", $chunkSize=100)
     {
         $p =
             [
@@ -334,7 +334,7 @@ Class Client{
             $i = new OrderBookItem();
             $i->price = $item['price'];
             $i->size = $item['size'];
-            $orderBook->bid[] = $item;
+            $orderBook->bid[] = $i;
         }
 
         return $orderBook;
@@ -348,7 +348,15 @@ Class Client{
             ];
 
 
-        return $this->chunker($func, 'GET', "public/trades/$pairID", $p, $chunkSize, function($item){return $item;} );
+        return $this->chunker($func, 'GET', "public/trades/$pairID", $p, $chunkSize, function($item) use($pairID){
+            $trade = new Trade();
+            $trade->price = $item['price'];
+            $trade->value = $item['quantity'];
+            $trade->pairID = $pairID;
+            $trade->side = $item['side'];
+            $trade->date = new \DateTime($item['timestamp']);
+            return $trade;
+        } );
     }
 
     public function request($method, $action, array $params)
