@@ -8,8 +8,13 @@
 
 namespace Crypto\HitBTC;
 
+use Crypto\Exchange\CurrencyBalance;
+use Crypto\Exchange\Order;
+use Crypto\Exchange\OrderBook;
+use Crypto\Exchange\OrderBookItem;
 use Crypto\Exchange\Pair;
 use Crypto\Exchange\PairLimit;
+use Crypto\Exchange\Trade;
 
 Class Client{
 
@@ -29,6 +34,9 @@ Class Client{
         $this->client = new \GuzzleHttp\Client();
     }
 
+    /**
+     * @return Pair[]
+     */
     public function getPairs()
     {
         $data = $this->request("GET", 'public/symbol', []);
@@ -57,10 +65,26 @@ Class Client{
         return $result;
     }
 
-
+    /**
+     * @return CurrencyBalance[]
+     */
     public function getBalance()
     {
-       return $this->request("GET", 'trading/balance', []);
+       $data = $this->request("GET", 'trading/balance', []);
+
+       $result = [];
+
+       foreach ($data as $item)
+       {
+           $balance = new CurrencyBalance();
+           $balance->currency = $item['currency'];
+           $balance->available  = $item['available'];
+           $balance->reserved = $item['reserved'];
+
+           $result[$item['currency']] = $balance;
+       }
+
+       return $result;
     }
 
     public function getNonZeroBalance()
@@ -71,9 +95,9 @@ Class Client{
 
         foreach($data as $item)
         {
-            if($item['available'] > 0 || $item['reserved'] > 0)
+            if($item->available > 0 || $item->reserved > 0)
             {
-                $result[] = $item;
+                $result[$item->currency] = $item;
             }
         }
 
@@ -82,9 +106,16 @@ Class Client{
 
     }
 
+    /**
+     * @param $pairID
+     * @param $direction
+     * @param $amount
+     * @param $price
+     * @return Order
+     */
     public function createOrder($pairID, $direction, $amount, $price)
     {
-        return $this->request("POST", 'order', [
+        $data =  $this->request("POST", 'order', [
             'symbol' => $pairID,
             'side' => $direction,
             'type' => 'limit',
@@ -93,39 +124,91 @@ Class Client{
             'price' => $price,
 
         ]);
+
+        $order = new Order();
+        $order->pairID = $data['symbol'];
+        $order->id = $data['clientOrderId'];
+        $order->side = $data['side'];
+        $order->value = $data['quantity'];
+        $order->price = $data['price'];
+        $order->date = new \DateTime($data['createdAt']);
+        $order->status = $data['status'];
+        $order->traded = $data['cumQuantity'];
+
+
+        return $order;
+
     }
 
-    public function closeOrder($orderClientID)
+    /**
+     * @param Order $order
+     * @return Order
+     */
+    public function closeOrder(Order $order)
     {
-        return $this->request("DELETE", "order/$orderClientID", []);
+        $item = $this->request("DELETE", "order/{$order->id}", []);
+
+        $order = new Order();
+        $order->pairID = $item['symbol'];
+        $order->id = $item['clientOrderId'];
+        $order->side = $item['side'];
+        $order->value = $item['quantity'];
+        $order->price = $item['price'];
+        $order->date =  new \DateTime($item['createdAt']);
+        $order->status = $item['status'];
+        $order->traded = $item['cumQuantity'];
+
+        return $item;
+
+
     }
 
+    /**
+     * @return Order[]
+     */
     public function getActiveOrders()
     {
-        return $this->request("GET", 'order', []);
+        $data = $this->request("GET", 'order', []);
+
+        $result = [];
+        foreach ($data as $item)
+        {
+            $order = new Order();
+            $order->pairID = $item['symbol'];
+            $order->id = $item['clientOrderId'];
+            $order->side = $item['side'];
+            $order->value = $item['quantity'];
+            $order->price = $item['price'];
+            $order->date =  new \DateTime($item['createdAt']);
+            $order->status = $item['status'];
+            $order->traded = $item['cumQuantity'];
+
+            $result[$order->id] = $order;
+        }
+        return $result;
     }
 
-    public function checkOrderIsActive($orderID)
+    /**
+     * @param Order $order
+     * @return bool
+     */
+    public function checkOrderIsActive(Order &$order)
     {
         $orders = $this->getActiveOrders();
 
-        foreach ($orders as $orderData)
+        if($result = (array_key_exists($order->id, $orders)))
         {
-            if($orderData['clientOrderId'] === $orderID) {
-                $order = new Order();
-                return $order->init($orderData);
-            }
+            $order = $orders[$order->id];
         }
 
-        return false;
+        return $result;
+
     }
 
     public function getOrderStatus(Order &$order)
     {
-        if($co = $this->checkOrderIsActive($order->id))
+        if($isActive = $this->checkOrderIsActive($order))
         {
-            unset($order);
-            $order = $co;
             return $order->status;
         }
 
@@ -152,12 +235,14 @@ Class Client{
 
         $this->getAccountTrades($order->pairID, function ($item) use ($order, &$trades)
         {
-            $td = new \DateTime($item['timestamp']);
-            if($td < $order->date) return false;
+            /**
+             * @var $item Trade
+             */
+            if($item->date < $order->date) return false;
 
-            if($item['clientOrderId'] === $order->id)
+            if($item->orderID === $order->id)
             {
-                $trades += $item['quantity'];
+                $trades += $item->value;
             }
 
             return true;
@@ -168,7 +253,7 @@ Class Client{
 
     }
 
-    public function chunker(callable $func, $method, $action, array $params,  $chunkSize = 100)
+    public function chunker(callable $func, $method, $action, array $params,  $chunkSize = 100, callable $itemConverter)
     {
         $go = true;
         $counter = 0;
@@ -188,6 +273,7 @@ Class Client{
             foreach ($data as $item)
             {
                 $counter++;
+                $item = $itemConverter($item);
                 $r = $func($item);
                 if($r === false) return $counter;
             }
@@ -211,24 +297,47 @@ Class Client{
             $p['symbol'] = $pairID;
         }
 
-       return $this->chunker($func, 'GET', 'history/trades', $p, $chunkSize );
+       return $this->chunker($func, 'GET', 'history/trades', $p, $chunkSize, function($item){
+
+           $trade = new Trade();
+           $trade->date = new \DateTime($item['timestamp']);
+           $trade->id = $item['id'];
+           $trade->orderID = $item['clientOrderId'];
+           $trade->pairID = $item['symbol'];
+           $trade->side = $item['side'];
+           $trade->value = $item['quantity'];
+           $trade->fee = $item['fee'];
+           $trade->price = $item['price'];
+
+           return $trade;
+
+       });
     }
 
     public function getOrderBook($pairID, $limit = 100)
     {
-        return $this->request('GET', "public/orderbook/$pairID", ['limit'=>$limit]);
-    }
+        $data = $this->request('GET', "public/orderbook/$pairID", ['limit'=>$limit]);
 
-    public function getBestBidAsk($pairID)
-    {
-        $data = $this->getOrderBook($pairID);
+        $orderBook = new OrderBook();
 
-        $result = [
-          'bid' => current($data['bid']),
-          'ask' => current($data['ask']),
-        ];
+        foreach ($data['ask'] as $item)
+        {
+            $i = new OrderBookItem();
+            $i->price = $item['price'];
+            $i->size = $item['size'];
+            $orderBook->ask[] = $i;
+        }
+        unset($item);
 
-        return $result;
+        foreach ($data['bid'] as $item)
+        {
+            $i = new OrderBookItem();
+            $i->price = $item['price'];
+            $i->size = $item['size'];
+            $orderBook->bid[] = $item;
+        }
+
+        return $orderBook;
     }
 
     public function getPairTrades($pairID, callable $func, $sort="DESC", $chunkSize=100)
@@ -239,7 +348,7 @@ Class Client{
             ];
 
 
-        return $this->chunker($func, 'GET', "public/trades/$pairID", $p, $chunkSize );
+        return $this->chunker($func, 'GET', "public/trades/$pairID", $p, $chunkSize, function($item){return $item;} );
     }
 
     public function request($method, $action, array $params)
