@@ -107,22 +107,18 @@ Class Client{
     }
 
     /**
-     * @param $pairID
-     * @param $direction
-     * @param $amount
-     * @param $price
+     * @param Order $order
      * @return Order
      */
-    public function createOrder($pairID, $direction, $amount, $price)
+    public function createOrder(Order &$order)
     {
         $data =  $this->request("POST", 'order', [
-            'symbol' => $pairID,
-            'side' => $direction,
+            'symbol' => $order->pairID,
+            'side' => $order->side,
             'type' => 'limit',
             'timeInForce' => 'GTC',
-            'quantity' => $amount,
-            'price' => $price,
-
+            'quantity' => $order->value,
+            'price' => $order->price,
         ]);
 
         $order = new Order();

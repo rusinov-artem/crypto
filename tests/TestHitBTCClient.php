@@ -20,10 +20,22 @@ class TestHitBTCClient extends TestCase
      */
     public $client;
 
+    /**
+     * @var Order
+     */
+    public $miniOrder;
+
     public function setUp()
     {
         $config = include __DIR__ . "/../config.php";
         $this->client = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
+
+        $order = new Order();
+        $order->side='buy';
+        $order->price = 0.01;
+        $order->value = 1;
+        $order->pairID = "BTCUSD";
+        $this->miniOrder = $order;
     }
 
     public function testGetPairs()
@@ -60,7 +72,7 @@ class TestHitBTCClient extends TestCase
 
     public function testCreateOrder()
     {
-        $order = $this->client->createOrder("BTCUSD", 'buy', 1, 0.01);
+        $order = $this->client->createOrder($this->miniOrder);
         $this->assertTrue('new' === $order->status);
         $this->assertNotNull($order->id);
         $this->assertTrue($order instanceof Order);
@@ -69,7 +81,7 @@ class TestHitBTCClient extends TestCase
 
     public function testCloseOrder()
     {
-        $order = $this->client->createOrder("BTCUSD", 'buy', 1, 0.01);
+        $order = $this->client->createOrder($this->miniOrder);
         $o = $this->client->closeOrder($order);
         $this->assertTrue('canceled' === $order->status);
         $this->assertNotNull($order->id);
@@ -82,7 +94,7 @@ class TestHitBTCClient extends TestCase
 
     public function testActiveOrders()
     {
-        $order = $this->client->createOrder("BTCUSD", 'buy', 1, 0.01);
+        $order = $this->client->createOrder($this->miniOrder);
         $orders = $this->client->getActiveOrders();
         $this->assertGreaterThan(0, $this->count($orders));
         $this->assertTrue(current($orders) instanceof Order);
@@ -92,7 +104,7 @@ class TestHitBTCClient extends TestCase
 
     public function testCheckOrderIsActive()
     {
-        $order = $this->client->createOrder("BTCUSD", 'buy', 1, 0.01);
+        $order = $this->client->createOrder($this->miniOrder);
         $this->assertTrue($this->client->checkOrderIsActive($order));
         $this->client->closeOrder($order);
         $this->assertTrue(!$this->client->checkOrderIsActive($order));
@@ -100,7 +112,7 @@ class TestHitBTCClient extends TestCase
 
     public function testOrderGetStatus()
     {
-        $order = $this->client->createOrder("BTCUSD", 'buy', 1, 0.01);
+        $order = $this->client->createOrder($this->miniOrder);
         $this->assertEquals('new',$this->client->getOrderStatus($order));
         $this->client->closeOrder($order);
         $this->assertEquals('canceled',$this->client->getOrderStatus($order));
