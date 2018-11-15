@@ -14,4 +14,9 @@ class Order
     public $side;
     public $traded = 0;
     public $status; // new, suspended, partiallyFilled, filled, canceled, expired
+
+    public function isActive()
+    {
+        return in_array($this->status, ['new', 'partiallyFilled']);
+    }
 }
