@@ -10,7 +10,7 @@ class Order
     public $date; //Дата размещения ордера на бирже
     public $price;
     public $value;
-    public $pairID; //И
+    public $pairID; //Идентификатор пары
     public $side; //"buy" or "sell"
     public $traded = 0; //Количество проданых\купленных монет
     public $status; // new, suspended, partiallyFilled, filled, canceled, expired
