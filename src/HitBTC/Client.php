@@ -249,15 +249,18 @@ Class Client{
 
     }
 
-    public function chunker(callable $func, $method, $action, array $params,  $chunkSize = 100, callable $itemConverter)
+    public function chunker(callable $func, $method, $action, array $params,  $chunkSize, callable $itemConverter)
     {
         $go = true;
         $counter = 0;
-        if($chunkSize)
+
+        if($chunkSize < 1)
         {
-            $params['limit'] = $chunkSize;
-            $params['offset'] = 0;
+            $chunkSize = 100;
         }
+
+        $params['limit'] = $chunkSize;
+        $params['offset'] = 0;
 
         while($go)
         {
