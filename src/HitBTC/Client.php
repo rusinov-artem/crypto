@@ -8,6 +8,7 @@
 
 namespace Crypto\HitBTC;
 
+use Crypto\Exchange\ClientInterface;
 use Crypto\Exchange\CurrencyBalance;
 use Crypto\Exchange\Order;
 use Crypto\Exchange\OrderBook;
@@ -16,7 +17,8 @@ use Crypto\Exchange\Pair;
 use Crypto\Exchange\PairLimit;
 use Crypto\Exchange\Trade;
 
-Class Client{
+Class Client implements ClientInterface
+{
 
     public $apiKey;
     public $secretKey;
