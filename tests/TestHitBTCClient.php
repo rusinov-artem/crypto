@@ -121,10 +121,13 @@ class TestHitBTCClient extends TestCase
     public function testGetAccountTrades()
     {
         $t = $this;
-        $this->client->chunkAccountTrades(null, function($trade)use($t){
+        $counter = 0;
+        $this->client->chunkAccountTrades(null, function($trade)use($t, &$counter){
            $t->assertTrue($trade instanceof Trade);
+           $counter++;
            return false;
         });
+        $this->assertTrue($counter >=0 );
     }
 
     public function testGetOrderBook()
@@ -140,10 +143,13 @@ class TestHitBTCClient extends TestCase
 
     public function testGetPairTrades()
     {
-        $this->client->getPairTrades("BTCUSD", function($trade){
+        $count = 0;
+        $this->client->getPairTrades("BTCUSD", function($trade, &$count){
+            $count++;
            $this->assertTrue($trade instanceof Trade);
             return false;
         });
+        $this->assertTrue($count>=0);
     }
 
 

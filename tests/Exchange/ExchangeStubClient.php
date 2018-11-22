@@ -141,7 +141,8 @@ class ExchangeStubClient implements ClientInterface
             throw new OrderNotFound($order->id);
         }
 
-        return clone $this->exchange->orders[$order->id];
+        $order =  clone $this->exchange->orders[$order->id];
+        return $order->status;
     }
 
     public function getOrderTrades(Order &$order)
@@ -171,7 +172,7 @@ class ExchangeStubClient implements ClientInterface
 
     public function getOrderBook($pairID, $limit = 100)
     {
-        if(!in_array($pairID, $this->exchange->pairs))
+        if(!array_key_exists($pairID, $this->exchange->pairs))
         {
             throw new PairNotFound($pairID);
         }
