@@ -18,6 +18,7 @@ while(1)
     sleep(1);
 
     $bots = $bs->getAll();
+    var_dump($bots);
 
     foreach ($bots as $botID)
     {

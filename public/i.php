@@ -14,20 +14,23 @@ $config = include __DIR__ . "/../config.php";
 $bs = new \Crypto\Bot\BotStorage();
 $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
 
+
+var_dump($hit->getPairs());
+
 $bot = new \Crypto\Bot\BotNext();
-$bot->id = "SMART";
+$bot->id = "BCHSVUSD";
 
 $inOrder = new \Crypto\Exchange\Order();
 $inOrder->side = 'buy';
-$inOrder->pairID = "SMARTUSD";
-$inOrder->price = 0.0179;
-$inOrder->value = 1000;
+$inOrder->pairID = "BCHSVUSD";
+$inOrder->price = 48.5;
+$inOrder->value = 1;
 
 $bot->inOrder = $inOrder;
 
 $outOrder = clone $inOrder;
 $outOrder -> side = 'sell';
-$outOrder->price = 0.02;
+$outOrder->price += 0.5;
 
 $bot->outOrder = $outOrder;
 $bs->saveBot($bot);
