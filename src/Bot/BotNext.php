@@ -114,6 +114,7 @@ class BotNext
 
     public function checkInOrder()
     {
+        $this->log('Checking in order');
         $status = $this->client->getOrderStatus($this->inOrder);
 
         if('filled' === $status)
@@ -124,6 +125,7 @@ class BotNext
 
     public function checkOutOrder()
     {
+        $this->log('Checking out order');
         $status = $this->client->getOrderStatus($this->outOrder);
 
         if('filled' === $status)
