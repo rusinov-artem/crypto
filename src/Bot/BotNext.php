@@ -32,6 +32,11 @@ class BotNext
             return true;
         }
 
+        if($this->inOrder->status === 'canceled' || $this->outOrder->status === 'canceled')
+        {
+            return true;
+        }
+
         return false;
     }
 
