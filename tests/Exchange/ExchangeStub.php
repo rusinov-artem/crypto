@@ -17,7 +17,7 @@ class ExchangeStub
     /**
      * @var Order[]
      */
-    public $orders;
+    public $orders = [];
 
     /**
      * @var Trade[]

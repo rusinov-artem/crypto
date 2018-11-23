@@ -25,13 +25,23 @@ class BotNext
      */
     public $client;
 
+    public function isFinished()
+    {
+        if($this->inOrder->status === 'filled' && $this->outOrder->status === 'filled')
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     public function getRoutes()
     {
         $routes = [];
         //check if this is fresh bot
         $routes[] = function ()
         {
-            if($this->inOrder->status == null || $this->outOrder->status == null)
+            if($this->inOrder->status !== null || $this->outOrder->status !== null)
                 return false;
 
             return [ 'action' => [$this, 'createInOrder'], 'params' => []];
@@ -41,9 +51,11 @@ class BotNext
         $routes[] = function ()
         {
             if($this->inOrder->isActive() && $this->outOrder->status == null)
-                return false;
+            {
+                return [ 'action' => [$this, 'checkInOrder'], 'params' => [] ];
+            }
 
-            return [ 'action' => [$this, 'checkInOrder'], 'params' => [] ];
+            return false;
 
         };
 
@@ -51,10 +63,11 @@ class BotNext
         {
             if($this->inOrder->status === 'filled' || $this->outOrder->isActive())
             {
-                return false;
+                return [ 'action' => [$this, 'checkOutOrder'], 'params' => [] ];
             }
 
-            return [ 'action' => [$this, 'checkOutOrder'], 'params' => [] ];
+            return false;
+
         };
 
         return $routes;
@@ -73,6 +86,8 @@ class BotNext
 
     public function tick()
     {
+        if($this->isFinished()) return ;
+
         $action = $this->getAction();
         if(is_callable($action['action']))
         {
@@ -108,7 +123,7 @@ class BotNext
 
         if('filled' === $status)
         {
-            $this->client->createOrder($this->outOrder);
+            //bot finished;
         }
 
     }
