@@ -13,16 +13,21 @@ $config = include __DIR__ . "/../config.php";
 
 $bs = new \Crypto\Bot\BotStorage();
 $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
-$bot = new \Crypto\Bot\Bot();
-$bot->client = $hit;
-$bot->id = "EDOUSD-STATIC";
-$bot->pairID = "EDOUSD";
-$bot->buyPercentage = 0.02;
-$bot->sellPercentage = 0.02;
-$bot->value = 10;
 
+$bot = new \Crypto\Bot\BotNext();
+$bot->id = "SMART";
+
+$inOrder = new \Crypto\Exchange\Order();
+$inOrder->side = 'buy';
+$inOrder->pairID = "SMARTUSD";
+$inOrder->price = 0.0179;
+$inOrder->value = 1000;
+
+$bot->inOrder = $inOrder;
+
+$outOrder = clone $inOrder;
+$outOrder -> side = 'sell';
+$outOrder->price = 0.02;
+
+$bot->outOrder = $outOrder;
 $bs->saveBot($bot);
-//$r = $bs->getBot('BTCUSD-01');
-//$r = $bs->getAll();
-//var_dump($r);
-//$bot->tick();
