@@ -9,11 +9,13 @@
     "require": {
         "guzzlehttp/guzzle": "^6.3",
         "symfony/filesystem": "^4.1",
-        "symfony/finder": "^4.1"
+        "symfony/finder": "^4.1",
+        "phpunit/phpunit": "^7.4"
     },
     "autoload": {
         "psr-4": {
-            "Crypto\\": "src"
+            "Crypto\\": "src",
+            "Crypto\\Tests\\": "tests"
         }
     }
 }

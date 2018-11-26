@@ -14,4 +14,5 @@ class Trade
     public $value;
     public $date;
     public $fee;
+    public $feeCurrency;
 }

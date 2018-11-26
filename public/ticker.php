@@ -15,17 +15,26 @@ $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.
 
 while(1)
 {
-    sleep(1);
+
 
     $bots = $bs->getAll();
 
+
     foreach ($bots as $botID)
     {
+        usleep((1/ count($bots) )* pow(10, 6));
         var_dump($botID);
-        $bot = $bs->getBot($botID);
-        $bot->client = $hit;
-        $bot->tick();
-        $bs->saveBot($bot);
+        try{
+            $bot = $bs->getBot($botID);
+            $bot->client = $hit;
+            $bot->tick();
+            $bs->saveBot($bot);
+        }
+        catch (\Throwable $t)
+        {
+            var_dump($t);
+        }
+
     }
 
 
