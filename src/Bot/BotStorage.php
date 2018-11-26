@@ -8,8 +8,6 @@
 
 namespace Crypto\Bot;
 
-
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
 class BotStorage

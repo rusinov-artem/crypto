@@ -34,7 +34,7 @@ class BotNext
 
         if($this->inOrder->status === 'canceled' || $this->outOrder->status === 'canceled')
         {
-            return true;
+            //return true;
         }
 
         return false;
@@ -55,7 +55,7 @@ class BotNext
 
         $routes[] = function ()
         {
-            if($this->inOrder->isActive() && $this->outOrder->status == null)
+            if(($this->inOrder->isActive() || $this->inOrder->status === 'canceled' )&& $this->outOrder->status == null)
             {
                 return [ 'action' => [$this, 'checkInOrder'], 'params' => [] ];
             }
@@ -66,7 +66,7 @@ class BotNext
 
         $routes[] = function ()
         {
-            if($this->inOrder->status === 'filled' || $this->outOrder->isActive())
+            if($this->inOrder->status === 'filled' || ( $this->outOrder->isActive() || $this->outOrder->status === 'canceled') )
             {
                 return [ 'action' => [$this, 'checkOutOrder'], 'params' => [] ];
             }
