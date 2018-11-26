@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: RusinovArtem
- * Date: 11/9/2018
- * Time: 7:55 PM
- */
 
 namespace Crypto\HitBTC;
 
