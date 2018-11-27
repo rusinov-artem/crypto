@@ -169,11 +169,11 @@ Class Client implements ClientInterface
             $order->pairID = $item['symbol'];
             $order->id = $item['clientOrderId'];
             $order->side = $item['side'];
-            $order->value = $item['quantity'];
-            $order->price = $item['price'];
+            $order->value = (double) $item['quantity'];
+            $order->price = (double) $item['price'];
             $order->date =  new \DateTime($item['createdAt']);
             $order->status = $item['status'];
-            $order->traded = $item['cumQuantity'];
+            $order->traded = (double) $item['cumQuantity'];
 
             $result[$order->id] = $order;
         }
@@ -208,7 +208,7 @@ Class Client implements ClientInterface
 
         $this->getOrderTrades($order);
 
-        if($order->traded >= $order->value)
+        if(abs((double)$order->traded - (double)$order->value) < pow(10, -9))
         {
             $order->status = 'filled';
         }
@@ -300,9 +300,9 @@ Class Client implements ClientInterface
            $trade->orderID = $item['clientOrderId'];
            $trade->pairID = $item['symbol'];
            $trade->side = $item['side'];
-           $trade->value = $item['quantity'];
-           $trade->fee = $item['fee'];
-           $trade->price = $item['price'];
+           $trade->value = (double) $item['quantity'];
+           $trade->fee = (double) $item['fee'];
+           $trade->price = (double) $item['price'];
 
            return $trade;
 
