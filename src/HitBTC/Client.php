@@ -41,11 +41,11 @@ Class Client implements ClientInterface
         foreach ($data as $item)
         {
             $limit = new PairLimit();
-            $limit->lotSize = (double) $item['quantityIncrement'];
-            $limit->priceTick = (double) $item['tickSize'];
-            $limit->feeCurrency = (double) $item['feeCurrency'];
-            $limit->takeLiquidityRate = (double) $item['takeLiquidityRate'];
-            $limit->provideLiquidityRate = (double) $item['provideLiquidityRate'];
+            $limit->lotSize = (float) $item['quantityIncrement'];
+            $limit->priceTick = (float) $item['tickSize'];
+            $limit->feeCurrency = (float) $item['feeCurrency'];
+            $limit->takeLiquidityRate = (float) $item['takeLiquidityRate'];
+            $limit->provideLiquidityRate = (float) $item['provideLiquidityRate'];
             $limit->pairID = $item['id'];
 
             $pair = new Pair();
@@ -74,8 +74,8 @@ Class Client implements ClientInterface
        {
            $balance = new CurrencyBalance();
            $balance->currency = $item['currency'];
-           $balance->available  = (double) $item['available'];
-           $balance->reserved = (double) $item['reserved'];
+           $balance->available  = (float) $item['available'];
+           $balance->reserved = (float) $item['reserved'];
 
            $result[$item['currency']] = $balance;
        }
@@ -122,11 +122,11 @@ Class Client implements ClientInterface
         $order->pairID = $data['symbol'];
         $order->id = $data['clientOrderId'];
         $order->side = $data['side'];
-        $order->value = (double) $data['quantity'];
-        $order->price = (double) $data['price'];
+        $order->value = (float) $data['quantity'];
+        $order->price = (float) $data['price'];
         $order->date = new \DateTime($data['createdAt']);
         $order->status = $data['status'];
-        $order->traded = (double) $data['cumQuantity'];
+        $order->traded = (float) $data['cumQuantity'];
 
 
         return $order;
@@ -146,11 +146,11 @@ Class Client implements ClientInterface
         $order->pairID = $item['symbol'];
         $order->id = $item['clientOrderId'];
         $order->side = $item['side'];
-        $order->value = (double)$item['quantity'];
-        $order->price = (double)$item['price'];
+        $order->value = (float)$item['quantity'];
+        $order->price = (float)$item['price'];
         $order->date =  new \DateTime($item['createdAt']);
         $order->status = 'canceled';
-        $order->traded = (double)$item['cumQuantity'];
+        $order->traded = (float)$item['cumQuantity'];
 
         return $order;
 
@@ -172,11 +172,11 @@ Class Client implements ClientInterface
             $order->pairID = $item['symbol'];
             $order->id = $item['clientOrderId'];
             $order->side = $item['side'];
-            $order->value = (double) $item['quantity'];
-            $order->price = (double) $item['price'];
+            $order->value = (float) $item['quantity'];
+            $order->price = (float) $item['price'];
             $order->date =  new \DateTime($item['createdAt']);
             $order->status = $item['status'];
-            $order->traded = (double) $item['cumQuantity'];
+            $order->traded = (float) $item['cumQuantity'];
 
             $result[$order->id] = $order;
         }
@@ -212,7 +212,7 @@ Class Client implements ClientInterface
 
         $this->getOrderTrades($order);
 
-        if(abs((double)$order->traded - (double)$order->value) < pow(10, -9))
+        if(abs((float)$order->traded - (float)$order->value) < pow(10, -9))
         {
             $order->status = 'filled';
         }
@@ -304,9 +304,9 @@ Class Client implements ClientInterface
            $trade->orderID = $item['clientOrderId'];
            $trade->pairID = $item['symbol'];
            $trade->side = $item['side'];
-           $trade->value = (double) $item['quantity'];
-           $trade->fee = (double) $item['fee'];
-           $trade->price = (double) $item['price'];
+           $trade->value = (float) $item['quantity'];
+           $trade->fee = (float) $item['fee'];
+           $trade->price = (float) $item['price'];
 
            return $trade;
 
