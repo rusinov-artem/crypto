@@ -41,11 +41,11 @@ Class Client implements ClientInterface
         foreach ($data as $item)
         {
             $limit = new PairLimit();
-            $limit->lotSize = $item['quantityIncrement'];
-            $limit->priceTick = $item['tickSize'];
-            $limit->feeCurrency = $item['feeCurrency'];
-            $limit->takeLiquidityRate = $item['takeLiquidityRate'];
-            $limit->provideLiquidityRate = $item['provideLiquidityRate'];
+            $limit->lotSize = (double) $item['quantityIncrement'];
+            $limit->priceTick = (double) $item['tickSize'];
+            $limit->feeCurrency = (double) $item['feeCurrency'];
+            $limit->takeLiquidityRate = (double) $item['takeLiquidityRate'];
+            $limit->provideLiquidityRate = (double) $item['provideLiquidityRate'];
             $limit->pairID = $item['id'];
 
             $pair = new Pair();
@@ -74,8 +74,8 @@ Class Client implements ClientInterface
        {
            $balance = new CurrencyBalance();
            $balance->currency = $item['currency'];
-           $balance->available  = $item['available'];
-           $balance->reserved = $item['reserved'];
+           $balance->available  = (double) $item['available'];
+           $balance->reserved = (double) $item['reserved'];
 
            $result[$item['currency']] = $balance;
        }
@@ -105,6 +105,7 @@ Class Client implements ClientInterface
     /**
      * @param Order $order
      * @return Order
+     * @throws \Exception
      */
     public function createOrder(Order &$order)
     {
@@ -121,11 +122,11 @@ Class Client implements ClientInterface
         $order->pairID = $data['symbol'];
         $order->id = $data['clientOrderId'];
         $order->side = $data['side'];
-        $order->value = $data['quantity'];
-        $order->price = $data['price'];
+        $order->value = (double) $data['quantity'];
+        $order->price = (double) $data['price'];
         $order->date = new \DateTime($data['createdAt']);
         $order->status = $data['status'];
-        $order->traded = $data['cumQuantity'];
+        $order->traded = (double) $data['cumQuantity'];
 
 
         return $order;
@@ -135,6 +136,7 @@ Class Client implements ClientInterface
     /**
      * @param Order $order
      * @return Order
+     * @throws \Exception
      */
     public function closeOrder(Order &$order)
     {
@@ -144,11 +146,11 @@ Class Client implements ClientInterface
         $order->pairID = $item['symbol'];
         $order->id = $item['clientOrderId'];
         $order->side = $item['side'];
-        $order->value = $item['quantity'];
-        $order->price = $item['price'];
+        $order->value = (double)$item['quantity'];
+        $order->price = (double)$item['price'];
         $order->date =  new \DateTime($item['createdAt']);
         $order->status = 'canceled';
-        $order->traded = $item['cumQuantity'];
+        $order->traded = (double)$item['cumQuantity'];
 
         return $order;
 
@@ -157,6 +159,7 @@ Class Client implements ClientInterface
 
     /**
      * @return Order[]
+     * @throws \Exception
      */
     public function getActiveOrders()
     {
@@ -183,6 +186,7 @@ Class Client implements ClientInterface
     /**
      * @param Order $order
      * @return bool
+     * @throws \Exception
      */
     public function checkOrderIsActive(Order &$order)
     {
