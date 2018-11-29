@@ -22,7 +22,7 @@ while(1)
 
     foreach ($bots as $botID)
     {
-        usleep((1/ count($bots) )* pow(10, 6));
+        usleep((2/ count($bots) )* pow(10, 6));
         var_dump($botID);
         try{
             $bot = $bs->getBot($botID);

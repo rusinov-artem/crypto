@@ -5,6 +5,7 @@ namespace Crypto\Bot;
 
 use Crypto\Exchange\Order;
 use Crypto\HitBTC\Client;
+use mysql_xdevapi\Exception;
 
 class BotNext
 {
@@ -109,6 +110,31 @@ class BotNext
 
     public function createInOrder()
     {
+
+        $ob = $this->client->getOrderBook($this->inOrder->pairID);
+
+        if($this->inOrder->side === 'buy')
+        {
+            if($ob->getBestAsk()->price <= $this->inOrder->price )
+            {
+                $this->log("WARNING! Order will not be placed cose actual price lower then buy order price");
+                return false;
+            }
+        }
+        elseif($this->inOrder->side === 'sell')
+        {
+            if($ob->getBestBid()->price >= $this->inOrder->price )
+            {
+                $this->log("WARNING! Order will not be placed cose actual price higher then sell order price");
+                return false;
+            }
+        }
+        else
+        {
+            throw new \Exception("Unexpected order side");
+        }
+
+
         $this->client->createOrder($this->inOrder);
     }
 
