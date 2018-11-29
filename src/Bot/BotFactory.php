@@ -39,4 +39,27 @@ class BotFactory
 
         return $bot;
     }
+
+    /**
+     * @param string $pairID
+     * @param float $lVolume
+     * @param float $buyPrice
+     * @param float $priceStep
+     * @param float $deltaPrice
+     * @param int $count
+     * @return CircleBot[]
+     */
+    public static function spreadAttack(string $pairID, float $lVolume, float $buyPrice, float $priceStep, float $deltaPrice, int $count)
+    {
+        $result = [];
+        for($i=0; $i<$count; $i++)
+        {
+            $price = $buyPrice - ($priceStep * $i);
+            $bot = self::simple($pairID, $lVolume, $price, $deltaPrice, $i+1 );
+            $bot->id = "spread_".$bot->id;
+            $result[] = $bot;
+        }
+        return $result;
+    }
 }
+
