@@ -1,12 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: RusinovArtem
- * Date: 11/9/2018
- * Time: 7:53 PM
- */
-
-use Crypto\A1;
 
 require __DIR__."/../vendor/autoload.php";
 $config = include __DIR__ . "/../config.php";
@@ -15,22 +7,14 @@ $bs = new \Crypto\Bot\BotStorage();
 $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
 
 
-var_dump($hit->getPairs());
+$bots = \Crypto\Bot\BotFactory::spreadAttack("BCHSVUSD", 0.1, 101, 0.2, 2, 10);
+foreach ($bots as $bot)
+    $bs->saveBot($bot);
 
-$bot = new \Crypto\Bot\BotNext();
-$bot->id = "BCHSVUSD";
+$bots = \Crypto\Bot\BotFactory::spreadAttack("BCHSVUSD", 0.1, 99, 0.4, 2, 10);
+foreach ($bots as $bot)
+    $bs->saveBot($bot);
 
-$inOrder = new \Crypto\Exchange\Order();
-$inOrder->side = 'buy';
-$inOrder->pairID = "BCHSVUSD";
-$inOrder->price = 48.5;
-$inOrder->value = 1;
-
-$bot->inOrder = $inOrder;
-
-$outOrder = clone $inOrder;
-$outOrder -> side = 'sell';
-$outOrder->price += 0.5;
-
-$bot->outOrder = $outOrder;
-$bs->saveBot($bot);
+$bots = \Crypto\Bot\BotFactory::spreadAttack("BCHSVUSD", 0.1, 95, 0.5, 2, 10);
+foreach ($bots as $bot)
+    $bs->saveBot($bot);
