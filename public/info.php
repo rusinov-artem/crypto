@@ -16,5 +16,3 @@ $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.
 
 
 var_dump($hit->getNonZeroBalance());
-
-var_dump($hit->getPairs("BTCUSD"));
