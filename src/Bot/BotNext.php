@@ -3,9 +3,14 @@
 
 namespace Crypto\Bot;
 
+use Crypto\Bot\Events\InOrderCreated;
+use Crypto\Bot\Events\InOrderExecuted;
+use Crypto\Bot\Events\OutOrderCreated;
+use Crypto\Bot\Events\OutOrderExecuted;
 use Crypto\Exchange\Order;
 use Crypto\HitBTC\Client;
-use mysql_xdevapi\Exception;
+use Symfony\Component\EventDispatcher\Event;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class BotNext
 {
@@ -25,6 +30,11 @@ class BotNext
      * @var Client
      */
     public $client;
+
+    /**
+     * @var EventDispatcher
+     */
+    public $dispatcher;
 
     public function isFinished()
     {
@@ -136,6 +146,8 @@ class BotNext
 
 
         $this->client->createOrder($this->inOrder);
+        $this->fire('BotNext.InOrderCreated', new InOrderCreated($this));
+
     }
 
     public function checkInOrder()
@@ -145,7 +157,9 @@ class BotNext
 
         if('filled' === $status)
         {
+            $this->fire('BotNext.InOrderExecuted', new InOrderExecuted($this));
             $this->client->createOrder($this->outOrder);
+            $this->fire('BotNext.OutOrderCreated', new OutOrderCreated($this));
         }
     }
 
@@ -156,6 +170,7 @@ class BotNext
 
         if('filled' === $status)
         {
+            $this->fire('BotNext.OutOrderExecuted', new OutOrderExecuted($this));
             //bot finished;
         }
 
@@ -165,6 +180,19 @@ class BotNext
     {
         $this->client = null;
         return array_keys(get_object_vars($this));
+    }
+
+    public function setEventDispatcher(EventDispatcher $dispatcher)
+    {
+        $this->dispatcher = $dispatcher;
+    }
+
+    public function fire($eventName, Event $event)
+    {
+        if($this->dispatcher)
+        {
+            $this->dispatcher->dispatch($eventName, $event);
+        }
     }
 
 }

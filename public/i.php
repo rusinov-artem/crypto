@@ -7,14 +7,10 @@ $bs = new \Crypto\Bot\BotStorage();
 $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
 
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack("BCHSVUSD", 0.1, 101, 0.2, 2, 10);
+$bots = \Crypto\Bot\BotFactory::spreadAttack("BCHSVUSD", 1, 93.0, 1, 0.5, 3);
 foreach ($bots as $bot)
     $bs->saveBot($bot);
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack("BCHSVUSD", 0.1, 99, 0.4, 2, 10);
-foreach ($bots as $bot)
-    $bs->saveBot($bot);
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack("BCHSVUSD", 0.1, 95, 0.5, 2, 10);
-foreach ($bots as $bot)
-    $bs->saveBot($bot);
+$bot = \Crypto\Bot\BotFactory::simple("BTCUSD", 0.01, 4020, 20);
+$bs->saveBot($bot);

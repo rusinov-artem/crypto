@@ -9,6 +9,8 @@ use Crypto\Exchange\Order;
 use Crypto\Tests\Exchange\ExchangeFabric;
 use Crypto\Tests\Exchange\ExchangeStubClient;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class TestBotNext extends TestCase
 {
@@ -27,11 +29,55 @@ class TestBotNext extends TestCase
      */
     public $bot;
 
+    public $dispatcher;
+
     public function setUp()
     {
 
-        $this->client = new ExchangeStubClient(ExchangeFabric::make());
+        $this->dispatcher = new EventDispatcher();
+        $this->dispatcher->addListener("BotNext.", function ($event)
+        {
+           var_dump(get_class($event));
+        });
 
+        $this->dispatcher->addSubscriber(new class implements EventSubscriberInterface {
+
+            /**
+             * Returns an array of event names this subscriber wants to listen to.
+             *
+             * The array keys are event names and the value can be:
+             *
+             *  * The method name to call (priority defaults to 0)
+             *  * An array composed of the method name to call and the priority
+             *  * An array of arrays composed of the method names to call and respective
+             *    priorities, or 0 if unset
+             *
+             * For instance:
+             *
+             *  * array('eventName' => 'methodName')
+             *  * array('eventName' => array('methodName', $priority))
+             *  * array('eventName' => array(array('methodName1', $priority), array('methodName2')))
+             *
+             * @return array The event names to listen to
+             */
+            public static function getSubscribedEvents()
+            {
+                return
+                [
+                  "BotNext.InOrderCreated" => ['handler'],
+                  "BotNext.InOrderExecuted" => ['handler'],
+                  "BotNext.OutOrderCreated" => ['handler'],
+                  "BotNext.OutOrderExecuted" => ['handler'],
+                ];
+            }
+
+            public function handler($event)
+            {
+                var_dump(get_class($event));
+            }
+        });
+
+        $this->client = new ExchangeStubClient(ExchangeFabric::make());
         $order = new Order();
         $order->side='buy';
         $order->price = 0.01;
@@ -59,6 +105,7 @@ class TestBotNext extends TestCase
         $bot->outOrder = $outOrder;
 
         $bot->client = $this->client;
+        $bot->dispatcher = $this->dispatcher;
 
         $bot->tick();
 
