@@ -8,8 +8,8 @@ use Throwable;
 
 class PairNotFound extends \Exception
 {
-    public function __construct($pairID)
+    public function __construct($message)
     {
-        parent::__construct("Pair $pairID not found", 2);
+        parent::__construct($message);
     }
 }

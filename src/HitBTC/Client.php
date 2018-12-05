@@ -4,6 +4,16 @@ namespace Crypto\HitBTC;
 
 use Crypto\Exchange\ClientInterface;
 use Crypto\Exchange\CurrencyBalance;
+use Crypto\Exchange\Exceptions\ActionIsForbidden;
+use Crypto\Exchange\Exceptions\AuthorisationFail;
+use Crypto\Exchange\Exceptions\CurrencyNotFound;
+use Crypto\Exchange\Exceptions\ExchangeError;
+use Crypto\Exchange\Exceptions\OrderNotFound;
+use Crypto\Exchange\Exceptions\OrderRejected;
+use Crypto\Exchange\Exceptions\PairNotFound;
+use Crypto\Exchange\Exceptions\TooManyRequests;
+use Crypto\Exchange\Exceptions\UnknownError;
+use Crypto\Exchange\Exceptions\ValidationError;
 use Crypto\Exchange\Order;
 use Crypto\Exchange\OrderBook;
 use Crypto\Exchange\OrderBookItem;
@@ -11,6 +21,10 @@ use Crypto\Exchange\Pair;
 use Crypto\Exchange\PairLimit;
 use Crypto\Exchange\Trade;
 use Crypto\Traits\Loggable;
+use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Psr7\Response;
+use Monolog\Logger;
 
 Class Client implements ClientInterface
 {
@@ -34,33 +48,135 @@ Class Client implements ClientInterface
 
     /**
      * @return Pair[]
+     * @throws UnknownError
      */
     public function getPairs()
     {
-        $data = $this->request("GET", 'public/symbol', []);
+        $response = $this->request("GET", 'public/symbol', []);
 
-        $result = [];
-        foreach ($data as $item)
+        if($response->getStatusCode() == 200)
         {
-            $limit = new PairLimit();
-            $limit->lotSize = (float) $item['quantityIncrement'];
-            $limit->priceTick = (float) $item['tickSize'];
-            $limit->feeCurrency = (float) $item['feeCurrency'];
-            $limit->takeLiquidityRate = (float) $item['takeLiquidityRate'];
-            $limit->provideLiquidityRate = (float) $item['provideLiquidityRate'];
-            $limit->pairID = $item['id'];
+            $data = json_decode((string)$response->getBody(), true);
+            $result = [];
+            foreach ($data as $item)
+            {
+                $limit = new PairLimit();
+                $limit->lotSize = (float) $item['quantityIncrement'];
+                $limit->priceTick = (float) $item['tickSize'];
+                $limit->feeCurrency = (float) $item['feeCurrency'];
+                $limit->takeLiquidityRate = (float) $item['takeLiquidityRate'];
+                $limit->provideLiquidityRate = (float) $item['provideLiquidityRate'];
+                $limit->pairID = $item['id'];
 
-            $pair = new Pair();
-            $pair->id = $item['id'];
-            $pair->baseCurrency = $item['baseCurrency'];
-            $pair->quoteCurrency = $item['quoteCurrency'];
-            $pair->limit = $limit;
+                $pair = new Pair();
+                $pair->id = $item['id'];
+                $pair->baseCurrency = $item['baseCurrency'];
+                $pair->quoteCurrency = $item['quoteCurrency'];
+                $pair->limit = $limit;
 
-            $result[$pair->id] = $pair;
+                $result[$pair->id] = $pair;
+            }
 
+            return $result;
         }
 
-        return $result;
+        $ex = $this->handleErrorResponse($response);
+
+        if($ex instanceof \Exception)
+        {
+            throw new $ex;
+        }
+
+    }
+
+    public function handleErrorResponse(Response $response)
+    {
+
+        $error = json_decode((string) $response, true);
+        $eMessage = "{$error['message']} ({$error['description']})";
+
+        if(in_array($response->getStatusCode(), [500, 502, 504]))
+        {
+            return new ExchangeError($eMessage);
+        }
+
+        if($error['code'] == 403 || $error['code'] == 1003)
+        {
+            return new ActionIsForbidden($eMessage);
+        }
+
+        if($error['code'] == 429)
+        {
+            return new TooManyRequests($eMessage);
+        }
+
+        if($error['code'] == 1001  || $error['code'] == 1001)
+        {
+            return new AuthorisationFail($eMessage);
+        }
+
+        if($error['code'] == 2001)
+        {
+            return new PairNotFound($eMessage);
+        }
+
+        if($error['code'] == 2002)
+        {
+            return new CurrencyNotFound($eMessage);
+        }
+
+        if($error['code'] == 2010)
+        {
+            return new OrderRejected(new Order(), $eMessage);
+        }
+
+        if($error['code'] == 2011)
+        {
+            return new OrderRejected(new Order(), $eMessage);
+        }
+
+        if($error['code'] == 2012)
+        {
+            return new OrderRejected(new Order(), $eMessage);
+        }
+
+        if($error['code'] == 2020)
+        {
+            return new OrderRejected(new Order(), $eMessage);
+        }
+
+        if($error['code'] == 2021)
+        {
+            return new OrderRejected(new Order(), $eMessage);
+        }
+
+        if($error['code'] == 2022)
+        {
+            return new OrderRejected(new Order(), $eMessage);
+        }
+
+        if($error['code'] == 20001)
+        {
+            return new OrderRejected(new Order(), $eMessage);
+        }
+
+        if($error['code'] == 20003)
+        {
+            return new OrderRejected(new Order(), $eMessage);
+        }
+
+        if($error['code'] == 20002)
+        {
+            return new OrderNotFound(new Order());
+        }
+
+        if($error['code'] == 10001)
+        {
+            return new ValidationError(new Order());
+        }
+
+        return new UnknownError($eMessage);
+
     }
 
     /**
@@ -68,21 +184,32 @@ Class Client implements ClientInterface
      */
     public function getBalance()
     {
-       $data = $this->request("GET", 'trading/balance', []);
+       $response = $this->request("GET", 'trading/balance', []);
+        if($response->getStatusCode() == 200)
+        {
+            $data = json_decode((string)$response->getBody(), true);
+            $result = [];
 
-       $result = [];
+            foreach ($data as $item)
+            {
+                $balance = new CurrencyBalance();
+                $balance->currency = $item['currency'];
+                $balance->available  = (float) $item['available'];
+                $balance->reserved = (float) $item['reserved'];
 
-       foreach ($data as $item)
-       {
-           $balance = new CurrencyBalance();
-           $balance->currency = $item['currency'];
-           $balance->available  = (float) $item['available'];
-           $balance->reserved = (float) $item['reserved'];
+                $result[$item['currency']] = $balance;
+            }
 
-           $result[$item['currency']] = $balance;
-       }
+            return $result;
+        }
 
-       return $result;
+        $ex = $this->handleErrorResponse($response);
+
+        if($ex instanceof \Exception)
+        {
+            throw new $ex;
+        }
+
     }
 
     public function getNonZeroBalance()
@@ -100,8 +227,6 @@ Class Client implements ClientInterface
         }
 
         return $result;
-
-
     }
 
     /**
@@ -111,7 +236,8 @@ Class Client implements ClientInterface
      */
     public function createOrder(Order &$order)
     {
-        $data =  $this->request("POST", 'order', [
+
+        $response =  $this->request("POST", 'order', [
             'symbol' => $order->pairID,
             'side' => $order->side,
             'type' => 'limit',
@@ -120,18 +246,33 @@ Class Client implements ClientInterface
             'price' => $order->price,
         ]);
 
-        $order = new Order();
-        $order->pairID = $data['symbol'];
-        $order->id = $data['clientOrderId'];
-        $order->side = $data['side'];
-        $order->value = (float) $data['quantity'];
-        $order->price = (float) $data['price'];
-        $order->date = new \DateTime($data['createdAt']);
-        $order->status = $data['status'];
-        $order->traded = (float) $data['cumQuantity'];
+        if($response->getStatusCode() == 200) {
+
+            $data = json_decode((string)$response->getBody(), true);
+
+            $order = new Order();
+            $order->pairID = $data['symbol'];
+            $order->id = $data['clientOrderId'];
+            $order->side = $data['side'];
+            $order->value = (float)$data['quantity'];
+            $order->price = (float)$data['price'];
+            $order->date = new \DateTime($data['createdAt']);
+            $order->status = $data['status'];
+            $order->traded = (float)$data['cumQuantity'];
 
 
-        return $order;
+            return $order;
+        }
+
+        $ex = $this->handleErrorResponse($response);
+
+        if($ex instanceof OrderRejected)
+        {
+            $ex->order = $order;
+            throw new $ex;
+        }
+
+        throw $ex;
 
     }
 
@@ -142,20 +283,34 @@ Class Client implements ClientInterface
      */
     public function closeOrder(Order &$order)
     {
-        $item = $this->request("DELETE", "order/{$order->id}", []);
+        $response = $this->request("DELETE", "order/{$order->id}", []);
 
-        $order = new Order();
-        $order->pairID = $item['symbol'];
-        $order->id = $item['clientOrderId'];
-        $order->side = $item['side'];
-        $order->value = (float)$item['quantity'];
-        $order->price = (float)$item['price'];
-        $order->date =  new \DateTime($item['createdAt']);
-        $order->status = 'canceled';
-        $order->traded = (float)$item['cumQuantity'];
+        if($response->getStatusCode() == 200)
+        {
+            $item = json_decode((string) $response->getBody() ,true);
 
-        return $order;
+            $order = new Order();
+            $order->pairID = $item['symbol'];
+            $order->id = $item['clientOrderId'];
+            $order->side = $item['side'];
+            $order->value = (float)$item['quantity'];
+            $order->price = (float)$item['price'];
+            $order->date =  new \DateTime($item['createdAt']);
+            $order->status = 'canceled';
+            $order->traded = (float)$item['cumQuantity'];
 
+            return $order;
+        }
+
+
+        $ex =  $this->handleErrorResponse($response);
+
+        if($ex instanceof OrderNotFound)
+        {
+            $ex->order = $order;
+        }
+
+        throw  $ex;
 
     }
 
@@ -165,24 +320,32 @@ Class Client implements ClientInterface
      */
     public function getActiveOrders()
     {
-        $data = $this->request("GET", 'order', []);
+        $response = $this->request("GET", 'order', []);
 
-        $result = [];
-        foreach ($data as $item)
+        if($response->getStatusCode() == 200)
         {
-            $order = new Order();
-            $order->pairID = $item['symbol'];
-            $order->id = $item['clientOrderId'];
-            $order->side = $item['side'];
-            $order->value = (float) $item['quantity'];
-            $order->price = (float) $item['price'];
-            $order->date =  new \DateTime($item['createdAt']);
-            $order->status = $item['status'];
-            $order->traded = (float) $item['cumQuantity'];
+            $data = json_decode((string)$response->getBody(), true);
 
-            $result[$order->id] = $order;
+            $result = [];
+            foreach ($data as $item)
+            {
+                $order = new Order();
+                $order->pairID = $item['symbol'];
+                $order->id = $item['clientOrderId'];
+                $order->side = $item['side'];
+                $order->value = (float) $item['quantity'];
+                $order->price = (float) $item['price'];
+                $order->date =  new \DateTime($item['createdAt']);
+                $order->status = $item['status'];
+                $order->traded = (float) $item['cumQuantity'];
+
+                $result[$order->id] = $order;
+            }
+            return $result;
         }
-        return $result;
+
+        throw $this->handleErrorResponse($response);
+
     }
 
     /**
@@ -267,19 +430,27 @@ Class Client implements ClientInterface
         while($go)
         {
 
-            $data = $this->request($method, $action, $params);
+            $response = $this->request($method, $action, $params);
 
-            if(count($data) < 1) break;
-
-            foreach ($data as $item)
+            if($response->getStatusCode() == 200)
             {
-                $counter++;
-                $item = $itemConverter($item);
-                $r = $func($item);
-                if($r === false) return $counter;
-            }
+                $data = json_decode( (string)$response->getBody(), true);
+                if(count($data) < 1) break;
 
-            $params['offset']  += $chunkSize;
+                foreach ($data as $item)
+                {
+                    $counter++;
+                    $item = $itemConverter($item);
+                    $r = $func($item);
+                    if($r === false) return $counter;
+                }
+
+                $params['offset']  += $chunkSize;
+            }
+            else
+            {
+                throw $this->handleErrorResponse($response);
+            }
 
         }
 
@@ -317,28 +488,38 @@ Class Client implements ClientInterface
 
     public function getOrderBook($pairID, $limit = 100)
     {
-        $data = $this->request('GET', "public/orderbook/$pairID", ['limit'=>$limit]);
+        $response = $this->request('GET', "public/orderbook/$pairID", ['limit'=>$limit]);
 
-        $orderBook = new OrderBook();
 
-        foreach ($data['ask'] as $item)
+        if(200 == $response->getStatusCode())
         {
-            $i = new OrderBookItem();
-            $i->price = $item['price'];
-            $i->size = $item['size'];
-            $orderBook->ask[] = $i;
-        }
-        unset($item);
+            $data = json_decode( (string)$response->getBody(), true);
 
-        foreach ($data['bid'] as $item)
-        {
-            $i = new OrderBookItem();
-            $i->price = $item['price'];
-            $i->size = $item['size'];
-            $orderBook->bid[] = $i;
+            $orderBook = new OrderBook();
+
+            foreach ($data['ask'] as $item)
+            {
+                $i = new OrderBookItem();
+                $i->price = $item['price'];
+                $i->size = $item['size'];
+                $orderBook->ask[] = $i;
+            }
+            unset($item);
+
+            foreach ($data['bid'] as $item)
+            {
+                $i = new OrderBookItem();
+                $i->price = $item['price'];
+                $i->size = $item['size'];
+                $orderBook->bid[] = $i;
+            }
+
+            return $orderBook;
         }
 
-        return $orderBook;
+        throw $this->handleErrorResponse($response);
+
+
     }
 
     public function getPairTrades($pairID, callable $func, $sort="DESC", $chunkSize=100)
@@ -379,10 +560,31 @@ Class Client implements ClientInterface
             $dataToSend['query'] = $params;
         }
 
+        $jParams = json_encode($params);
 
-        $response = $this->client->request($method, "https://api.hitbtc.com/api/2/" . $action, $dataToSend);
+        try{
+            $response = $this->client->request($method, "https://api.hitbtc.com/api/2/" . $action, $dataToSend);
+        }
+        catch (ClientException $e)
+        {
+            $eResponse = $e->getResponse();
+            $logMessage = "REQUEST {$method} {$action} with params $jParams";
+            $logMessage .="\n\t RESPONSE status=".$eResponse->getStatusCode()." body=".(string)$eResponse->getBody();
+            $this->log($logMessage, [], Logger::ERROR);
 
-        return json_decode((string)$response->getBody(), true);
+            return $eResponse;
+        }
+        catch (ServerException $e)
+        {
+            $eResponse = $e->getResponse();
+            $logMessage = "REQUEST {$method} {$action} with params $jParams";
+            $logMessage .="\n\t RESPONSE status=".$eResponse->getStatusCode()." body=".(string)$eResponse->getBody();
+            $this->log($logMessage, [], Logger::ERROR);
+
+            return $eResponse;
+        }
+
+        return $response;
     }
 
 }

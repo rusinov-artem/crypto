@@ -144,7 +144,7 @@ class TestHitBTCClient extends TestCase
     public function testGetPairTrades()
     {
         $count = 0;
-        $this->client->getPairTrades("BTCUSD", function($trade, &$count){
+        $this->client->getPairTrades("BTCUSD", function($trade)use(&$count){
             $count++;
            $this->assertTrue($trade instanceof Trade);
             return false;
