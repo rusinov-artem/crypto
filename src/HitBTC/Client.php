@@ -10,9 +10,11 @@ use Crypto\Exchange\OrderBookItem;
 use Crypto\Exchange\Pair;
 use Crypto\Exchange\PairLimit;
 use Crypto\Exchange\Trade;
+use Crypto\Traits\Loggable;
 
 Class Client implements ClientInterface
 {
+   use Loggable;
 
     public $apiKey;
     public $secretKey;

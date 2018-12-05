@@ -8,6 +8,7 @@ use Crypto\Bot\BotNext;
 use Crypto\Exchange\Order;
 use Crypto\Tests\Exchange\ExchangeFabric;
 use Crypto\Tests\Exchange\ExchangeStubClient;
+use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -35,10 +36,6 @@ class TestBotNext extends TestCase
     {
 
         $this->dispatcher = new EventDispatcher();
-        $this->dispatcher->addListener("BotNext.", function ($event)
-        {
-           var_dump(get_class($event));
-        });
 
         $this->dispatcher->addSubscriber(new class implements EventSubscriberInterface {
 
@@ -106,6 +103,7 @@ class TestBotNext extends TestCase
 
         $bot->client = $this->client;
         $bot->dispatcher = $this->dispatcher;
+        $bot->logger = new Logger("TEST");
 
         $bot->tick();
 

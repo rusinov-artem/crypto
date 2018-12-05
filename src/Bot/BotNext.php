@@ -9,11 +9,17 @@ use Crypto\Bot\Events\OutOrderCreated;
 use Crypto\Bot\Events\OutOrderExecuted;
 use Crypto\Exchange\Order;
 use Crypto\HitBTC\Client;
+use Crypto\Traits\Loggable;
+use Monolog\Logger;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class BotNext
 {
+
+    use Loggable;
+
     public $id;
 
     /**
@@ -109,13 +115,6 @@ class BotNext
         {
             call_user_func_array($action['action'], $action['params']);
         }
-    }
-
-    public function log($message)
-    {
-        $logLine = (new \DateTime())->format("Y-m-d H:i:s")." {{$this->id}} $message";
-        var_dump($logLine);
-        file_put_contents(__DIR__."/../../storage/log/{$this->id}.log", $logLine."\n", FILE_APPEND);
     }
 
     public function createInOrder()
