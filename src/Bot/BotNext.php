@@ -167,4 +167,26 @@ class BotNext
         return array_keys(get_object_vars($this));
     }
 
+    public function calculateProfit()
+    {
+        $inOrderV = $this->inOrder->price * $this->inOrder->value;
+        $outOrderV = $this->outOrder->price * $this->outOrder->value;
+
+        if($this->inOrder->side === 'buy' && $this->outOrder === 'sell')
+        {
+            $profit = $outOrderV - $inOrderV;
+        }
+        elseif($this->inOrder->side === 'sell' && $this->outOrder === 'buy')
+        {
+            $profit = $inOrderV - $outOrderV;
+        }
+        else
+        {
+            throw new \Exception("Bot unable to calculate profit");
+        }
+
+        return $profit;
+    }
+
+
 }
