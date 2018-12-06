@@ -92,7 +92,7 @@ Class Client implements ClientInterface
     public function handleErrorResponse(Response $response)
     {
 
-        $error = json_decode((string) $response, true);
+        $error = json_decode((string) $response->getBody(), true);
         $eMessage = "{$error['message']} ({$error['description']})";
 
         if(in_array($response->getStatusCode(), [500, 502, 504]))
