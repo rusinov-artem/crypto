@@ -194,4 +194,12 @@ class BotNext
         }
     }
 
+    public function log($message, array $context = [], $level=100)
+    {
+        if($this->logger)
+        {
+            $this->logger->log($level, $message, ['bot_id'=>$this->id]);
+        }
+    }
+
 }
