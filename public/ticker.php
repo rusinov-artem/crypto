@@ -27,6 +27,10 @@ while(1)
 
 
     $bots = $bs->getAll();
+    if(count($bots)<1)
+    {
+        sleep(1); continue;
+    }
 
 
     foreach ($bots as $botID)
