@@ -25,7 +25,7 @@ class Client implements ClientInterface
      */
     public function getPairs()
     {
-        // TODO: Implement getPairs() method.
+       $response = $this->request("GET", "exchangeInfo", []);
     }
 
     /**
@@ -121,8 +121,8 @@ class Client implements ClientInterface
         }
 
 
-        $response = $this->client->request($method, "https://api.hitbtc.com/api/2/" . $action, $dataToSend);
+        $response = $this->client->request($method, "https://api.binance.com/api/v1/" . $action, $dataToSend);
 
-        return json_decode((string)$response->getBody(), true);
+        return $response;
     }
 }
