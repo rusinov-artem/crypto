@@ -194,12 +194,27 @@ class BotNext
         }
     }
 
-    public function log($message, array $context = [], $level=100)
+
+    public function calculateProfit()
     {
-        if($this->logger)
+        $inOrderV = $this->inOrder->price * $this->inOrder->value;
+        $outOrderV = $this->outOrder->price * $this->outOrder->value;
+
+        if($this->inOrder->side === 'buy' && $this->outOrder === 'sell')
         {
-            $this->logger->log($level, $message, ['bot_id'=>$this->id]);
+            $profit = $outOrderV - $inOrderV;
         }
+        elseif($this->inOrder->side === 'sell' && $this->outOrder === 'buy')
+        {
+            $profit = $inOrderV - $outOrderV;
+        }
+        else
+        {
+            throw new \Exception("Bot unable to calculate profit");
+        }
+
+        return $profit;
     }
+
 
 }
