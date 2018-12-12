@@ -13,6 +13,8 @@ use Crypto\Traits\Loggable;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
 use Monolog\Logger;
+use Psr\SimpleCache\CacheInterface;
+use Symfony\Component\Cache\Simple\FilesystemCache;
 
 class Client implements ClientInterface
 {
@@ -27,9 +29,42 @@ class Client implements ClientInterface
      */
     public $client;
 
+    /**
+     * @var CacheInterface
+     */
+    public $cache;
+
     public function __construct()
     {
         $this->client = new \GuzzleHttp\Client();
+        $this->cache = new FilesystemCache("binance", 0, __DIR__."/../../storage/cache");
+    }
+
+    public function getAveragePrice($pairID)
+    {
+
+        if($this->cache)
+        {
+            $key = "binance.$pairID";
+            if($this->cache->has($key))
+            {
+                return $this->cache->get($key);
+            }
+        }
+
+        $response = $this->publicRequest("v3", "GET", "avgPrice", ['symbol'=>$pairID]);
+
+        if($response->getStatusCode()==200)
+        {
+            $data = json_decode((string)$response->getBody(), true);
+            $price = $data['price'];
+            if($this->cache)
+            {
+                $this->cache->set($key, $price);
+            }
+
+            return $price;
+        }
     }
 
     /**
@@ -37,7 +72,7 @@ class Client implements ClientInterface
      */
     public function getPairs()
     {
-       $response = $this->request("GET", "exchangeInfo", []);
+       $response = $this->publicRequest('v1', "GET",  "exchangeInfo", []);
 
        if($response->getStatusCode() == 200)
        {
@@ -64,12 +99,21 @@ class Client implements ClientInterface
 
                 if($filter['filterType'] === 'LOT_SIZE')
                 {
-                    $limit->lotSize = $filter['stepSize'];
+                    $limit->lotSize = $filter['minQty'];
+                    $limit->qtyTick = $filter['stepSize'];
                     if($filter['stepSize'] !== $filter['minQty'])
                     {
                         var_dump($symbol);
                     }
                 }
+
+                if($filter['filterType'] ===  'MIN_NOTIONAL')
+                {
+                    $limit->lotSize = $filter['minNotional'] / $this->getAveragePrice($symbol['symbol']);
+                }
+
+
+
             }
 
             $pair->limit = $limit;
@@ -155,7 +199,7 @@ class Client implements ClientInterface
         // TODO: Implement getPairTrades() method.
     }
 
-    public function request($method, $action, array $params)
+    public function request( $version, $method,  $action, array $params)
     {
 
         $dataToSend = [];
@@ -181,7 +225,49 @@ class Client implements ClientInterface
 
         try {
             $jParams = json_encode($params);
-            $response = $this->client->request($method, "https://api.binance.com/api/v3/" . $action, $dataToSend);
+            $response = $this->client->request($method, "https://api.binance.com/api/$version/" . $action, $dataToSend);
+        } catch (ClientException $e) {
+            $eResponse = $e->getResponse();
+            $logMessage = "REQUEST {$method} {$action} with params $jParams";
+            $logMessage .= "\n\t RESPONSE status=" . $eResponse->getStatusCode() . " body=" . (string)$eResponse->getBody();
+            $this->log($logMessage, [], Logger::ERROR);
+
+            return $eResponse;
+
+        } catch (ServerException $e) {
+            $eResponse = $e->getResponse();
+            $logMessage = "REQUEST {$method} {$action} with params $jParams";
+            $logMessage .= "\n\t RESPONSE status=" . $eResponse->getStatusCode() . " body=" . (string)$eResponse->getBody();
+            $this->log($logMessage, [], Logger::ERROR);
+
+            return $eResponse;
+        }
+
+        return $response;
+    }
+
+    public function publicRequest( $version, $method,  $action, array $params)
+    {
+        $dataToSend = [];
+
+        $dataToSend['headers'] =
+            [
+                "X-MBX-APIKEY" => $this->apiKey,
+            ];
+
+        if(strtolower($method) !== "get")
+        {
+            $dataToSend['form_params'] = $params;
+        }
+        else
+        {
+            $dataToSend['query'] = $params;
+        }
+
+
+        try {
+            $jParams = json_encode($params);
+            $response = $this->client->request($method, "https://api.binance.com/api/$version/" . $action, $dataToSend);
         } catch (ClientException $e) {
             $eResponse = $e->getResponse();
             $logMessage = "REQUEST {$method} {$action} with params $jParams";
