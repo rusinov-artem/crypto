@@ -8,6 +8,7 @@ class PairLimit
 {
     public $pairID;
     public $lotSize;
+    public $qtyTick;
     public $priceTick;
     public $takeLiquidityRate;
     public $provideLiquidityRate;
