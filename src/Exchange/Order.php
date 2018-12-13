@@ -14,6 +14,7 @@ class Order
     public $side; //"buy" or "sell"
     public $traded = 0; //Количество проданых\купленных монет
     public $status; // new, suspended, partiallyFilled, filled, canceled, expired
+    public $type = "limit"; //limit, market
 
     public function isActive()
     {

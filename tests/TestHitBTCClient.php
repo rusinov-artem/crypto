@@ -15,28 +15,7 @@ use PHPUnit\Framework\TestCase;
 
 class TestHitBTCClient extends TestCase
 {
-    /**
-     * @var Client
-     */
-    public $client;
 
-    /**
-     * @var Order
-     */
-    public $miniOrder;
-
-    public function setUp()
-    {
-        $config = include __DIR__ . "/../config.php";
-        $this->client = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
-
-        $order = new Order();
-        $order->side='buy';
-        $order->price = 0.01;
-        $order->value = 1;
-        $order->pairID = "BTCUSD";
-        $this->miniOrder = $order;
-    }
 
     public function testGetPairs()
     {

@@ -7,7 +7,6 @@ namespace Crypto\Binance;
 use Crypto\Exchange\ClientInterface;
 use Crypto\Exchange\CurrencyBalance;
 use Crypto\Exchange\Order;
-use Crypto\Exchange\Pair;
 use Crypto\Exchange\PairLimit;
 use Crypto\Traits\Loggable;
 use GuzzleHttp\Exception\ClientException;
@@ -57,7 +56,7 @@ class Client implements ClientInterface
         if($response->getStatusCode()==200)
         {
             $data = json_decode((string)$response->getBody(), true);
-            $price = $data['price'];
+            $price = (float)$data['price'];
             if($this->cache)
             {
                 $this->cache->set($key, $price, 10);
@@ -82,7 +81,8 @@ class Client implements ClientInterface
 
          foreach ($data['symbols'] as $symbol)
          {
-            $pair = new Pair();
+            $pair = new \Crypto\Binance\Pair();
+            $pair->setClient($this);
             $pair->id = $symbol['symbol'];
             $pair->baseCurrency = $symbol['baseAsset'];
             $pair->quoteCurrency = $symbol['quoteAsset'];
@@ -105,12 +105,7 @@ class Client implements ClientInterface
 
             if($filterItem = $filter->getFilter("MIN_NOTIONAL"))
             {
-                $limit->lotSize = (float)$filterItem['minNotional'] / (float)$this->getAveragePrice($symbol['symbol']);
-
-                if($limit->qtyTick > 0)
-                {
-                    $limit->lotSize  =  (floor($limit->lotSize / $limit->qtyTick)  + 1) * $limit->qtyTick;
-                }
+                $limit->minNotional = (float)$filterItem['minNotional'];
             }
 
 
@@ -129,12 +124,44 @@ class Client implements ClientInterface
      */
     public function getBalance()
     {
-        // TODO: Implement getBalance() method.
+
+        $response = $this->request("v3", 'GET', "account", []);
+
+        if($response->getStatusCode() === 200)
+        {
+            $data = json_decode((string)$response->getBody(), true);
+
+            $result = [];
+
+            foreach ($data['balances'] as $bData)
+            {
+                $balance = new CurrencyBalance();
+                $balance->currency = $bData['asset'];
+                $balance->available = $bData['free'];
+                $balance->reserved = $bData['locked'];
+                $result[$balance->currency] = $balance;
+            }
+
+            return $result;
+
+        }
     }
 
     public function getNonZeroBalance()
     {
-        // TODO: Implement getNonZeroBalance() method.
+        $data = $this->getBalance();
+
+        $result = [];
+
+        foreach($data as $item)
+        {
+            if($item->available > 0 || $item->reserved > 0)
+            {
+                $result[$item->currency] = $item;
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -143,7 +170,32 @@ class Client implements ClientInterface
      */
     public function createOrder(Order &$order)
     {
-        // TODO: Implement createOrder() method.
+        $params =
+            [
+              'symbol' =>$order->pairID,
+              'side' => strtoupper($order->side),
+              'type' => strtoupper($order->type),
+              'timeInForce' => "GTC",
+              'quantity' => $order->value,
+              'price' => $order->price,
+            ];
+
+
+        $response = $this->request("v3", "POST", "order", $params );
+
+        if($response->getStatusCode() === 200)
+        {
+            $data = json_decode((string)$response->getBody(), true);
+
+            $order = new Order();
+            $order->pairID = $data['symbol'];
+            $order->id = $data['clientOrderId'];
+            $order->date = new \DateTime($data['transactTime']);
+            $order->price = (float)$data['price'];
+            $order->value = (float)$data['origQty'];
+            $order->traded = (float)$data['executedQty'];
+            //$order
+        }
     }
 
     /**
