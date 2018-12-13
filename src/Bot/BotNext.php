@@ -3,11 +3,23 @@
 
 namespace Crypto\Bot;
 
+use Crypto\Bot\Events\InOrderCreated;
+use Crypto\Bot\Events\InOrderExecuted;
+use Crypto\Bot\Events\OutOrderCreated;
+use Crypto\Bot\Events\OutOrderExecuted;
 use Crypto\Exchange\Order;
 use Crypto\HitBTC\Client;
+use Crypto\Traits\Loggable;
+use Monolog\Logger;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\Event;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class BotNext
 {
+
+    use Loggable;
+
     public $id;
 
     /**
@@ -24,6 +36,11 @@ class BotNext
      * @var Client
      */
     public $client;
+
+    /**
+     * @var EventDispatcher
+     */
+    public $dispatcher;
 
     public function isFinished()
     {
@@ -100,16 +117,36 @@ class BotNext
         }
     }
 
-    public function log($message)
-    {
-        $logLine = (new \DateTime())->format("Y-m-d H:i:s")." {{$this->id}} $message";
-        var_dump($logLine);
-        file_put_contents(__DIR__."/../../storage/log/{$this->id}.log", $logLine."\n", FILE_APPEND);
-    }
-
     public function createInOrder()
     {
+
+        $ob = $this->client->getOrderBook($this->inOrder->pairID);
+
+        if($this->inOrder->side === 'buy')
+        {
+            if($ob->getBestAsk()->price <= $this->inOrder->price )
+            {
+                $this->log("WARNING! Order will not be placed cose actual price lower then buy order price");
+                return false;
+            }
+        }
+        elseif($this->inOrder->side === 'sell')
+        {
+            if($ob->getBestBid()->price >= $this->inOrder->price )
+            {
+                $this->log("WARNING! Order will not be placed cose actual price higher then sell order price");
+                return false;
+            }
+        }
+        else
+        {
+            throw new \Exception("Unexpected order side");
+        }
+
+
         $this->client->createOrder($this->inOrder);
+        $this->fire('BotNext.InOrderCreated', new InOrderCreated($this));
+
     }
 
     public function checkInOrder()
@@ -119,7 +156,9 @@ class BotNext
 
         if('filled' === $status)
         {
+            $this->fire('BotNext.InOrderExecuted', new InOrderExecuted($this));
             $this->client->createOrder($this->outOrder);
+            $this->fire('BotNext.OutOrderCreated', new OutOrderCreated($this));
         }
     }
 
@@ -130,6 +169,7 @@ class BotNext
 
         if('filled' === $status)
         {
+            $this->fire('BotNext.OutOrderExecuted', new OutOrderExecuted($this));
             //bot finished;
         }
 
@@ -140,5 +180,41 @@ class BotNext
         $this->client = null;
         return array_keys(get_object_vars($this));
     }
+
+    public function setEventDispatcher(EventDispatcher $dispatcher)
+    {
+        $this->dispatcher = $dispatcher;
+    }
+
+    public function fire($eventName, Event $event)
+    {
+        if($this->dispatcher)
+        {
+            $this->dispatcher->dispatch($eventName, $event);
+        }
+    }
+
+
+    public function calculateProfit()
+    {
+        $inOrderV = $this->inOrder->price * $this->inOrder->value;
+        $outOrderV = $this->outOrder->price * $this->outOrder->value;
+
+        if($this->inOrder->side === 'buy' && $this->outOrder === 'sell')
+        {
+            $profit = $outOrderV - $inOrderV;
+        }
+        elseif($this->inOrder->side === 'sell' && $this->outOrder === 'buy')
+        {
+            $profit = $inOrderV - $outOrderV;
+        }
+        else
+        {
+            throw new \Exception("Bot unable to calculate profit");
+        }
+
+        return $profit;
+    }
+
 
 }

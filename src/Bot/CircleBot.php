@@ -20,7 +20,7 @@ class CircleBot extends BotNext
             $this->currentCircle++;
             $this->log("Circle #{$this->currentCircle} passed");
 
-            if($this->currentCircle <= $this->circles)
+            if( ($this->currentCircle <= $this->circles) || $this->circles <=0 )
             {
                 $this->renew();
                 $this->log("Bot renewed");
