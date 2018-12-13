@@ -10,9 +10,12 @@
         "guzzlehttp/guzzle": "^6.3",
         "symfony/filesystem": "^4.1",
         "symfony/finder": "^4.1",
-        "phpunit/phpunit": "^7.4",
         "symfony/event-dispatcher": "^4.2",
-        "monolog/monolog": "^1.24"
+        "monolog/monolog": "^1.24",
+        "symfony/cache": "^4.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^7.4"
     },
     "autoload": {
         "psr-4": {

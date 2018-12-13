@@ -2,3 +2,4 @@
 config.php
 vendor
 storage
+!storage/cache

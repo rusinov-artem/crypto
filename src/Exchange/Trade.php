@@ -12,6 +12,10 @@ class Trade
     public $side;
     public $price;
     public $value;
+
+    /**
+     * @var \DateTime
+     */
     public $date;
     public $fee;
     public $feeCurrency;
