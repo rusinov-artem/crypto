@@ -62,6 +62,7 @@ Class Client implements ClientInterface
             {
                 $limit = new PairLimit();
                 $limit->lotSize = (float) $item['quantityIncrement'];
+                $limit->qtyTick = (float) $item['quantityIncrement'];
                 $limit->priceTick = (float) $item['tickSize'];
                 $limit->feeCurrency = (float) $item['feeCurrency'];
                 $limit->takeLiquidityRate = (float) $item['takeLiquidityRate'];

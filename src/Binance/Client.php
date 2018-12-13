@@ -60,7 +60,7 @@ class Client implements ClientInterface
             $price = $data['price'];
             if($this->cache)
             {
-                $this->cache->set($key, $price);
+                $this->cache->set($key, $price, 10);
             }
 
             return $price;
@@ -90,31 +90,29 @@ class Client implements ClientInterface
             $limit = new PairLimit();
             $limit->pairID = $pair->id;
 
-            foreach ($symbol['filters'] as $filter)
+            $filter = new PairFilter($symbol['filters']);
+
+            if($filterItem = $filter->getFilter("PRICE_FILTER"))
             {
-                if($filter['filterType'] === 'PRICE_FILTER')
-                {
-                    $limit->priceTick = $filter['tickSize'];
-                }
-
-                if($filter['filterType'] === 'LOT_SIZE')
-                {
-                    $limit->lotSize = $filter['minQty'];
-                    $limit->qtyTick = $filter['stepSize'];
-                    if($filter['stepSize'] !== $filter['minQty'])
-                    {
-                        var_dump($symbol);
-                    }
-                }
-
-                if($filter['filterType'] ===  'MIN_NOTIONAL')
-                {
-                    $limit->lotSize = $filter['minNotional'] / $this->getAveragePrice($symbol['symbol']);
-                }
-
-
-
+                $limit->priceTick = (float)$filterItem['tickSize'];
             }
+
+            if($filterItem = $filter->getFilter("LOT_SIZE"))
+            {
+                $limit->lotSize = (float) $filterItem['minQty'];
+                $limit->qtyTick = (float)$filterItem['stepSize'];
+            }
+
+            if($filterItem = $filter->getFilter("MIN_NOTIONAL"))
+            {
+                $limit->lotSize = (float)$filterItem['minNotional'] / (float)$this->getAveragePrice($symbol['symbol']);
+
+                if($limit->qtyTick > 0)
+                {
+                    $limit->lotSize  =  (floor($limit->lotSize / $limit->qtyTick)  + 1) * $limit->qtyTick;
+                }
+            }
+
 
             $pair->limit = $limit;
             $result[$pair->id] = $pair;
