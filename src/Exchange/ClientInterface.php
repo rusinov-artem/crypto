@@ -2,6 +2,11 @@
 
 namespace Crypto\Exchange;
 
+use Crypto\Exchange\Exceptions\OrderNotFound;
+use Crypto\Exchange\Exceptions\OrderRejected;
+use Crypto\Exchange\Exceptions\UnknownError;
+use Crypto\Exchange\Exceptions\ValidationError;
+
 interface ClientInterface
 {
     /**
@@ -45,6 +50,15 @@ interface ClientInterface
 
     public function chunkAccountTrades($pairID, callable $func, $sort = "DESC", $chunkSize = 100);
 
+    /**
+     * @param $pairID
+     * @param int $limit
+     * @return OrderBook
+     * @throws OrderNotFound
+     * @throws OrderRejected
+     * @throws UnknownError
+     * @throws ValidationError
+     */
     public function getOrderBook($pairID, $limit = 100);
 
     public function getPairTrades($pairID, callable $func, $sort = "DESC", $chunkSize = 100);

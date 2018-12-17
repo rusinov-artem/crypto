@@ -8,9 +8,6 @@
 
 namespace Crypto\Exchange;
 
-
-
-
 class Analytics
 {
     /**
@@ -63,5 +60,51 @@ class Analytics
             return 999999999;
         }
 
+    }
+
+    public function getSellVolume($pair, \DateInterval $interval)
+    {
+
+    }
+
+    public function getBuyVolume($pair, \DateInterval $interval)
+    {
+
+    }
+
+    public function getBidVolume($pair, $percent)
+    {
+       $ob =  $this->client->getOrderBook($pair);
+       $targetPrice = $ob->getBestBid()->price * (1 - $percent);
+
+       $volume = 0;
+
+       foreach ($ob->bid as $orderBookItem)
+       {
+           if($orderBookItem->price > $targetPrice)
+           {
+               $volume += $orderBookItem->size;
+           }
+       }
+
+       return $volume;
+    }
+
+    public function getAskVolume($pair, $percent)
+    {
+        $ob =  $this->client->getOrderBook($pair);
+        $targetPrice = $ob->getBestAsk()->price * (1 + $percent);
+
+        $volume = 0;
+
+        foreach ($ob->ask as $orderBookItem)
+        {
+            if($orderBookItem->price < $targetPrice)
+            {
+                $volume += $orderBookItem->size;
+            }
+        }
+
+        return $volume;
     }
 }

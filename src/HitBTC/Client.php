@@ -487,6 +487,15 @@ Class Client implements ClientInterface
        });
     }
 
+    /**
+     * @param $pairID
+     * @param int $limit
+     * @return OrderBook
+     * @throws OrderNotFound
+     * @throws OrderRejected
+     * @throws UnknownError
+     * @throws ValidationError
+     */
     public function getOrderBook($pairID, $limit = 100)
     {
         $response = $this->request('GET', "public/orderbook/$pairID", ['limit'=>$limit]);
