@@ -6,12 +6,17 @@ namespace Crypto\Binance;
 
 use Crypto\Exchange\ClientInterface;
 use Crypto\Exchange\CurrencyBalance;
+use Crypto\Exchange\Exceptions\OrderNotFound;
+use Crypto\Exchange\Exceptions\OrderRejected;
+use Crypto\Exchange\Exceptions\PairNotFound;
+use Crypto\Exchange\Exceptions\UnknownError;
 use Crypto\Exchange\Order;
 use Crypto\Exchange\PairLimit;
 use Crypto\Traits\Loggable;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
 use Monolog\Logger;
+use mysql_xdevapi\Exception;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\Cache\Simple\FilesystemCache;
 
@@ -167,6 +172,7 @@ class Client implements ClientInterface
     /**
      * @param Order $order
      * @return Order
+     * @throws \Exception
      */
     public function createOrder(Order &$order)
     {
@@ -180,6 +186,10 @@ class Client implements ClientInterface
               'price' => $order->price,
             ];
 
+        if($order->id)
+        {
+            $params['newClientOrderId'] = $order->id;
+        }
 
         $response = $this->request("v3", "POST", "order", $params );
 
@@ -187,24 +197,117 @@ class Client implements ClientInterface
         {
             $data = json_decode((string)$response->getBody(), true);
 
-            $order = new Order();
             $order->pairID = $data['symbol'];
             $order->id = $data['clientOrderId'];
-            $order->date = new \DateTime($data['transactTime']);
+            $order->date = (new \DateTime())->setTimestamp($data['transactTime'] / pow(10, 3));
             $order->price = (float)$data['price'];
             $order->value = (float)$data['origQty'];
             $order->traded = (float)$data['executedQty'];
-            //$order
+            $order->status = $this->convertOrderStatus($data['status']);
+            $order->type = strtolower($data['type']);
+            $order->side = strtolower($data['side']);
+
+            return $order;
+
         }
+
+        $data = json_decode((string)$response->getBody(), true);
+
+        if($response->getStatusCode() == 400)
+        {
+            if($data['code'] == -1013)
+            {
+                throw new OrderRejected($order, "Invalid price. {$data['msg']}");
+            }
+
+            if($data['code'] == -1121 )
+            {
+                throw new PairNotFound("$order->pairID. {$data['msg']}");
+            }
+
+            if($data['code'] == -2010)
+            {
+                $pair = $this->getPairs()[$order->pairID];
+                $currency = $pair->quoteCurrency;
+                throw new OrderRejected($order, "Not enough $currency. {$data['msg']}");
+            }
+
+        }
+
+        throw new OrderRejected($order, "{$data['msg']}");
     }
 
+    public function convertOrderStatus($status)
+    {
+        // new, suspended, partiallyFilled, filled, canceled, expired
+        $map =
+            [
+               "NEW"=>'new',
+               "PARTIALLY_FILLED" => 'partiallyFilled',
+               "FILLED"=>'filled',
+               "CANCELED" => 'canceled',
+               "EXPIRED"=>"expired"
+            ];
+
+        if(!array_key_exists($status, $map))
+        {
+            return null;
+        }
+
+        return $map[$status];
+
+    }
+
+    public function getMinimalValue($pairID, $price)
+    {
+        $pairs = $this->getPairs();
+
+        if(!array_key_exists($pairID, $pairs))
+        {
+            throw new PairNotFound("$pairID not found");
+        }
+
+        $pair = $pairs[$pairID];
+
+        var_dump($pair->limit);
+
+        return $pair->limit->minNotional / $price;
+    }
     /**
      * @param Order $order
      * @return Order
      */
     public function closeOrder(Order &$order)
     {
-        // TODO: Implement closeOrder() method.
+        $params =
+            [
+                'symbol' =>$order->pairID,
+                'origClientOrderId' => $order->id,
+                'newClientOrderId' => $order->id,
+            ];
+
+
+        $response = $this->request("v3", "DELETE", "order", $params );
+
+        if($response->getStatusCode() === 200)
+        {
+            $data = json_decode((string)$response->getBody(), true);
+
+            $order->pairID = $data['symbol'];
+            $order->id = $data['clientOrderId'];
+            $order->price = (float)$data['price'];
+            $order->value = (float)$data['origQty'];
+            $order->traded = (float)$data['executedQty'];
+            $order->status = $this->convertOrderStatus($data['status']);
+            $order->type = strtolower($data['type']);
+            $order->side = strtolower($data['side']);
+
+            return $order;
+
+        }
+
+        throw new OrderNotFound($order->id);
+
     }
 
     /**
@@ -212,7 +315,38 @@ class Client implements ClientInterface
      */
     public function getActiveOrders()
     {
-        // TODO: Implement getActiveOrders() method.
+        //GET /api/v3/openOrders
+
+        $response = $this->request("v3", "GET", "openOrders",[]);
+
+        $data = json_decode((string)$response->getBody(), true);
+
+        if($response->getStatusCode()==200)
+        {
+            $result = [];
+
+            foreach ($data as $orderData)
+            {
+                $order = new Order();
+                $order->pairID = $orderData['symbol'];
+                $order->id = $orderData['clientOrderId'];
+                $order->price = (float)$orderData['price'];
+                $order->value = (float)$orderData['origQty'];
+                $order->traded = (float)$orderData['executedQty'];
+                $order->status = $this->convertOrderStatus($orderData['status']);
+                $order->type = strtolower($orderData['type']);
+                $order->side = strtolower($orderData['side']);
+                $order->date = (new \DateTime())->setTimestamp($orderData['time'] / pow(10, 3));
+
+                $result[$order->id] = $order;
+            }
+
+            return $result;
+        }
+
+        throw new UnknownError($data['msg'], $data['code']);
+
+
     }
 
     /**
