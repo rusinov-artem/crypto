@@ -62,6 +62,17 @@ class Analytics
 
     }
 
+    public function getUltraIndex(string $pair, float $percent, \DateInterval $interval): float
+    {
+        $askV = $this->getAskVolume($pair, $percent);
+        $bidV = $this->getBidVolume($pair, $percent);
+        $index = $this->getTradeIndex($pair, $interval);
+        $i2 = $bidV / $askV;
+        var_dump($i2);
+
+        return $UI = $index * $i2;
+    }
+
     public function getSellVolume($pair, \DateInterval $interval)
     {
 
