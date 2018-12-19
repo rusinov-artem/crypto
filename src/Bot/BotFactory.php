@@ -5,6 +5,7 @@ namespace Crypto\Bot;
 
 
 use Crypto\Exchange\Order;
+use Crypto\HitBTC\Client;
 
 class BotFactory
 {
@@ -72,6 +73,43 @@ class BotFactory
             $bot->id = "spreadStatic_".$bot->id;
             $result[] = $bot;
         }
+        return $result;
+    }
+
+    public static function spreadMartinSV(float $buyPrice, Client $client)
+    {
+        $pairID = "BCHSVUSD";
+
+        $balance = $client->getNonZeroBalance()['USD']->available;
+        $balance = 600;
+        $lVolume=0.1;
+        $priceStep=0.1;
+        $tp = 1;
+
+        $result = [];
+
+        $i=0;
+        $price = $buyPrice - ($priceStep * $i);
+
+        while($balance > $price * $lVolume){
+            $i++;
+
+            $bot = self::simple($pairID, $lVolume, $price, $tp, $i );
+
+            var_dump(" ({$bot->inOrder->value}) {$bot->inOrder->price} => {$bot->outOrder->price}");
+
+            $bot->id = "spreadStatic_".$bot->id;
+            $lVolume += 0.1;
+            $balance -= $price * $lVolume;
+            $priceStep += 0.1;
+            $tp += 0.05;
+            $price = $buyPrice - ($priceStep * $i);
+            $result[] = $bot;
+
+        };
+
+        var_dump($i);
+
         return $result;
     }
 }
