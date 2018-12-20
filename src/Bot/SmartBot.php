@@ -3,6 +3,7 @@
 
 namespace Crypto\Bot;
 
+
 use Crypto\Bot\Events\InOrderCreated;
 use Crypto\Bot\Events\InOrderExecuted;
 use Crypto\Bot\Events\OutOrderCreated;
@@ -15,7 +16,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
-class BotNext
+class SmartBot
 {
 
     use Loggable;
@@ -194,7 +195,6 @@ class BotNext
         }
     }
 
-
     public function calculateProfit()
     {
         $inOrderV = $this->inOrder->price * $this->inOrder->value;
@@ -214,15 +214,6 @@ class BotNext
         }
 
         return $profit;
-    }
-
-    public function getOrders()
-    {
-        return
-        [
-          $this->inOrder,
-          $this->outOrder,
-        ];
     }
 
 }
