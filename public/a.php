@@ -1,5 +1,6 @@
 <?php
 var_dump(0.3/ 0.1);
+$db = new \PDO("sqlite:".__DIR__."/../storage/db/crypton.db");
 
 
 die();
