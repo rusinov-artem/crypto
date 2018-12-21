@@ -41,3 +41,14 @@ foreach ($bots as $botID)
 //        Отметить обработанный трейд флагом
 //
 ///////////////////////////////////////////////////////////
+
+$pair = "BCHSVUSD";
+
+$pairs = $hit->getPairs();
+
+var_dump($pairs[$pair]);
+
+$hit->chunkAccountTrades($pair, function( \Crypto\Exchange\Trade $t)
+{
+    var_dump($t);
+});
