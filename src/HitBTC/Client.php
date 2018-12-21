@@ -48,7 +48,6 @@ Class Client implements ClientInterface
 
     /**
      * @return Pair[]
-     * @throws UnknownError
      */
     public function getPairs()
     {
@@ -64,7 +63,7 @@ Class Client implements ClientInterface
                 $limit->lotSize = (float) $item['quantityIncrement'];
                 $limit->qtyTick = (float) $item['quantityIncrement'];
                 $limit->priceTick = (float) $item['tickSize'];
-                $limit->feeCurrency = (float) $item['feeCurrency'];
+                $limit->feeCurrency =  $item['feeCurrency'];
                 $limit->takeLiquidityRate = (float) $item['takeLiquidityRate'];
                 $limit->provideLiquidityRate = (float) $item['provideLiquidityRate'];
                 $limit->pairID = $item['id'];
@@ -470,7 +469,14 @@ Class Client implements ClientInterface
             $p['symbol'] = $pairID;
         }
 
-       return $this->chunker($func, 'GET', 'history/trades', $p, $chunkSize, function($item){
+        $pairs = $this->getPairs();
+
+        /**
+         * @var  $pairInfo Pair
+         */
+        $pairInfo = $pairs[$pairID];
+
+       return $this->chunker($func, 'GET', 'history/trades', $p, $chunkSize, function($item) use($pairInfo) {
 
            $trade = new Trade();
            $trade->date = new \DateTime($item['timestamp']);
@@ -481,6 +487,7 @@ Class Client implements ClientInterface
            $trade->value = (float) $item['quantity'];
            $trade->fee = (float) $item['fee'];
            $trade->price = (float) $item['price'];
+           $trade->feeCurrency = $pairInfo->limit->feeCurrency;
 
            return $trade;
 

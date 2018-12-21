@@ -5,7 +5,7 @@ namespace Crypto\Exchange;
 
 /**
  * Class Pair
- * @property $limit
+ * @property PairLimit $limit
  * @package Crypto\Exchange
  */
 class Pair
