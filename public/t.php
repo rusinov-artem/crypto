@@ -16,3 +16,7 @@ $handler = new \Monolog\Handler\StreamHandler(__DIR__ . '/app2.log');
 $handler->setLevel(300);
 $logger->pushHandler($handler);
 $logger->log(Logger::CRITICAL, "SLDKFJ");
+
+$dt = new DateTime();
+$dt->setTimezone(new DateTimeZone("UTC33"));
+var_dump($dt->getTimezone()->getName());

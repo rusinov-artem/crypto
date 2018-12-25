@@ -30,7 +30,14 @@ foreach ($bots as $botID)
     $bot = $bs->getBot($botID);
     $orders = array_merge($orders, $bot->getOrders());
 }
-
+///////////////////////////////////////////////////////
+///////////////////////////////////////////////////////
+///  == Получить список пользователей, боты которых должн быть обработанны
+///  == Получить список пар по которым есть работающие боты
+//
+///
+///        По каждой паре выполнить
+///
 //////////////////////////////////////////////////////////
 // 1. Получить все трейды начиная с последней проверки
 //      по текущему клиенту
@@ -47,8 +54,10 @@ $pair = "BCHSVUSD";
 $pairs = $hit->getPairs();
 
 var_dump($pairs[$pair]);
-
-$hit->chunkAccountTrades($pair, function( \Crypto\Exchange\Trade $t)
+$commission = 0;
+$hit->chunkAccountTrades($pair, function( \Crypto\Exchange\Trade $t) use (&$commission)
 {
-    var_dump($t);
+    $commission += $t->fee;
 });
+
+var_dump($commission);
