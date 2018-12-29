@@ -212,6 +212,9 @@ Class Client implements ClientInterface
 
     }
 
+    /**
+     * @return CurrencyBalance[]
+     */
     public function getNonZeroBalance()
     {
         $data = $this->getBalance();
