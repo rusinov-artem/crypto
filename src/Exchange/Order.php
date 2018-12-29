@@ -6,7 +6,9 @@ namespace Crypto\Exchange;
 
 class Order
 {
-    public $id = null; //Идентификатор ордера на бирже
+    public $id = null; //Идентификатор ордера в БД
+    public $eOrderID; //Идентификатор ордера на бирже
+    public $eClientOrderID; //Клиентский идентификатор ордера на бирже
     public $date; //Дата размещения ордера на бирже
     public $price;
     public $value;

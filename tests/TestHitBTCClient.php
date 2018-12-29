@@ -16,6 +16,28 @@ use PHPUnit\Framework\TestCase;
 class TestHitBTCClient extends TestCase
 {
 
+    /**
+     * @var Client
+     */
+    public $client;
+
+    /**
+     * @var Order
+     */
+    public $miniOrder;
+
+    public function setUp()
+    {
+        $config = include __DIR__ . "/../config.php";
+        $this->client = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
+
+        $order = new Order();
+        $order->side='buy';
+        $order->price = 0.01;
+        $order->value = 1;
+        $order->pairID = "BTCUSD";
+        $this->miniOrder = $order;
+    }
 
     public function testGetPairs()
     {
@@ -53,7 +75,8 @@ class TestHitBTCClient extends TestCase
     {
         $order = $this->client->createOrder($this->miniOrder);
         $this->assertTrue('new' === $order->status);
-        $this->assertNotNull($order->id);
+        $this->assertNotNull($order->eClientOrderID);
+        $this->assertNotNull($order->eOrderID);
         $this->assertTrue($order instanceof Order);
         $this->client->closeOrder($order);
     }
@@ -63,11 +86,13 @@ class TestHitBTCClient extends TestCase
         $order = $this->client->createOrder($this->miniOrder);
         $o = $this->client->closeOrder($order);
         $this->assertTrue('canceled' === $order->status);
-        $this->assertNotNull($order->id);
+        $this->assertNotNull($order->eClientOrderID);
+        $this->assertNotNull($order->eOrderID);
         $this->assertTrue($order instanceof Order);
 
         $this->assertTrue('canceled' === $o->status);
-        $this->assertNotNull($o->id);
+        $this->assertNotNull($o->eClientOrderID);
+        $this->assertNotNull($o->eOrderID);
         $this->assertTrue($o instanceof Order);
     }
 
@@ -77,7 +102,7 @@ class TestHitBTCClient extends TestCase
         $orders = $this->client->getActiveOrders();
         $this->assertGreaterThan(0, $this->count($orders));
         $this->assertTrue(current($orders) instanceof Order);
-        $this->assertArrayHasKey($order->id, $orders);
+        $this->assertArrayHasKey($order->eClientOrderID, $orders);
         $this->client->closeOrder($order);
     }
 

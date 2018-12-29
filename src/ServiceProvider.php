@@ -9,14 +9,22 @@
 namespace Crypto;
 
 
+use Crypto\Crypton\CryptonRepository;
 use Crypto\Exchange\Analytics;
 use Crypto\Exchange\ClientInterface;
+use Doctrine\DBAL\Connection;
 use PDO;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class ServiceProvider
 {
 
     public static $services;
+
+    /**
+     * @var EventDispatcher
+     */
+    public static $dispatcher;
 
     public static function getLogger($file, $title)
     {
@@ -73,4 +81,41 @@ class ServiceProvider
 
         return $pdo;
     }
+
+    public static function getCryptonRepository()
+    {
+        $repo = new CryptonRepository(self::getDBALConnection());
+        return $repo;
+    }
+
+    public static function getDBALConnection()
+    {
+        $c= include __DIR__."/../config.php";
+
+        $config = new \Doctrine\DBAL\Configuration();
+
+        $connectionParams = array(
+            'dbname' => $c['db.schema'],
+            'user' => $c['db.user'],
+            'password' => $c['db.password'],
+            'host' => $c['db.host'],
+            'driver' => 'pdo_mysql',
+        );
+
+        $conn = \Doctrine\DBAL\DriverManager::getConnection($connectionParams, $config);
+
+
+        return $conn;
+    }
+
+    public static function getEventDispatcher()
+    {
+        if(!self::$dispatcher)
+        {
+            self::$dispatcher = new EventDispatcher();
+        }
+
+        return self::$dispatcher;
+    }
+
 }

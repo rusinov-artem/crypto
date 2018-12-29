@@ -255,7 +255,8 @@ Class Client implements ClientInterface
 
             $order = new Order();
             $order->pairID = $data['symbol'];
-            $order->id = $data['clientOrderId'];
+            $order->eClientOrderID = $data['clientOrderId'];
+            $order->eOrderID = $data['id'];
             $order->side = $data['side'];
             $order->value = (float)$data['quantity'];
             $order->price = (float)$data['price'];
@@ -286,7 +287,7 @@ Class Client implements ClientInterface
      */
     public function closeOrder(Order &$order)
     {
-        $response = $this->request("DELETE", "order/{$order->id}", []);
+        $response = $this->request("DELETE", "order/{$order->eClientOrderID}", []);
 
         if($response->getStatusCode() == 200)
         {
@@ -294,7 +295,8 @@ Class Client implements ClientInterface
 
             $order = new Order();
             $order->pairID = $item['symbol'];
-            $order->id = $item['clientOrderId'];
+            $order->eClientOrderID = $item['clientOrderId'];
+            $order->eOrderID = $item['id'];
             $order->side = $item['side'];
             $order->value = (float)$item['quantity'];
             $order->price = (float)$item['price'];
@@ -334,7 +336,8 @@ Class Client implements ClientInterface
             {
                 $order = new Order();
                 $order->pairID = $item['symbol'];
-                $order->id = $item['clientOrderId'];
+                $order->eClientOrderID = $item['clientOrderId'];
+                $order->eOrderID = $item['id'];
                 $order->side = $item['side'];
                 $order->value = (float) $item['quantity'];
                 $order->price = (float) $item['price'];
@@ -342,7 +345,7 @@ Class Client implements ClientInterface
                 $order->status = $item['status'];
                 $order->traded = (float) $item['cumQuantity'];
 
-                $result[$order->id] = $order;
+                $result[$order->eClientOrderID] = $order;
             }
             return $result;
         }
@@ -360,9 +363,9 @@ Class Client implements ClientInterface
     {
         $orders = $this->getActiveOrders();
 
-        if($result = (array_key_exists($order->id, $orders)))
+        if($result = (array_key_exists($order->eClientOrderID, $orders)))
         {
-            $order = $orders[$order->id];
+            $order = $orders[$order->eClientOrderID];
         }
 
         return $result;
@@ -404,7 +407,7 @@ Class Client implements ClientInterface
              */
             if($item->date < $order->date) return false;
 
-            if($item->orderID === $order->id)
+            if($item->eOrderID === $order->eOrderID)
             {
                 $trades += $item->value;
             }
@@ -474,23 +477,20 @@ Class Client implements ClientInterface
 
         $pairs = $this->getPairs();
 
-        /**
-         * @var  $pairInfo Pair
-         */
-        $pairInfo = $pairs[$pairID];
 
-       return $this->chunker($func, 'GET', 'history/trades', $p, $chunkSize, function($item) use($pairInfo) {
+       return $this->chunker($func, 'GET', 'history/trades', $p, $chunkSize, function($item) use(&$pairs) {
 
            $trade = new Trade();
            $trade->date = new \DateTime($item['timestamp']);
-           $trade->id = $item['id'];
-           $trade->orderID = $item['clientOrderId'];
+           $trade->eTradeID = $item['id'];
+           $trade->eClientOrderID = $item['clientOrderId'];
+           $trade->eOrderID = $item['orderId'];
            $trade->pairID = $item['symbol'];
            $trade->side = $item['side'];
            $trade->value = (float) $item['quantity'];
            $trade->fee = (float) $item['fee'];
            $trade->price = (float) $item['price'];
-           $trade->feeCurrency = $pairInfo->limit->feeCurrency;
+           $trade->feeCurrency = $pairs[$trade->pairID]->limit->feeCurrency;
 
            return $trade;
 
