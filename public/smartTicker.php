@@ -5,6 +5,9 @@
  * Date: 11/10/2018
  * Time: 4:43 PM
  */
+
+use Crypto\ServiceProvider;
+
 require __DIR__."/../vendor/autoload.php";
 $config = include __DIR__ . "/../config.php";
 
@@ -51,13 +54,15 @@ foreach ($bots as $botID)
 
 $pair = "BCHSVUSD";
 
-$pairs = $hit->getPairs();
 
-var_dump($pairs[$pair]);
-$commission = 0;
-$hit->chunkAccountTrades($pair, function( \Crypto\Exchange\Trade $t) use (&$commission)
-{
-    $commission += $t->fee;
-});
+$tm = new \Crypto\HitBTC\TradeManager($hit, ServiceProvider::getCryptonRepository(), ServiceProvider::getEventDispatcher());
 
-var_dump($commission);
+$botManager = new \Crypto\Bot\BotsManager();
+$botManager->subscribeTrades($tm);
+
+$orderManager = new \Crypto\HitBTC\OrderManager(ServiceProvider::getDBALConnection(), ServiceProvider::getEventDispatcher());
+$orderManager->subscribeTrades($tm);
+
+
+$tm->loadTrades(0, $pair);
+

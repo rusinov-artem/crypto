@@ -51,8 +51,9 @@ class CryptonRepository
         $trade->value = $row['value'];
         $trade->fee = $row['fee'];
         $trade->side = $row['side'];
-        $trade->feeCurrency = $row['feeCurrency'];
-        $trade->orderID = $row['order_id'];
+        $trade->feeCurrency = $row['fee_currency'];
+        $trade->eOrderID = $row['e_order_id'];
+        $trade->eClientOrderID = $row['e_client_order_id'];
         $trade->accessID = $row['access_id'];
 
         return $trade;
@@ -71,8 +72,9 @@ class CryptonRepository
         $row['value']        = $trade->value;
         $row['fee']          = $trade->fee;
         $row['side']         = $trade->side ;
-        $row['feeCurrency']  = $trade->feeCurrency;
-        $row['order_id']     = $trade->orderID;
+        $row['fee_currency']  = $trade->feeCurrency;
+        $row['e_order_id']     = $trade->eOrderID;
+        $row['e_client_order_id'] = $trade->eClientOrderID;
         $row['access_id']    = $trade->accessID;
 
         return $row;

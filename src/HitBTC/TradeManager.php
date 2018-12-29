@@ -37,11 +37,12 @@ class TradeManager
         }
 
         $trades = [];
-        $this->client->chunkAccountTrades($pairID, function (Trade $trade) use ($lastTrade, &$trades) {
+        $this->client->chunkAccountTrades($pairID, function (Trade $trade) use ($lastTrade, &$trades, $accessID) {
 
             if($trade->date->getTimestamp() <= $lastTrade->date->getTimestamp())
                 return false;
 
+            $trade->accessID = $accessID;
             $trades[] = $trade;
 
         });
