@@ -407,7 +407,7 @@ Class Client implements ClientInterface
              */
             if($item->date < $order->date) return false;
 
-            if($item->eOrderID === $order->eOrderID)
+            if($item->eOrderID == $order->eOrderID)
             {
                 $trades += $item->value;
             }
@@ -482,9 +482,9 @@ Class Client implements ClientInterface
 
            $trade = new Trade();
            $trade->date = new \DateTime($item['timestamp']);
-           $trade->eTradeID = $item['id'];
-           $trade->eClientOrderID = $item['clientOrderId'];
-           $trade->eOrderID = $item['orderId'];
+           $trade->eTradeID = (string)$item['id'];
+           $trade->eClientOrderID = (string)$item['clientOrderId'];
+           $trade->eOrderID = (string)$item['orderId'];
            $trade->pairID = $item['symbol'];
            $trade->side = $item['side'];
            $trade->value = (float) $item['quantity'];
