@@ -15,6 +15,9 @@ class Analytics
      */
     public $client;
 
+    public $sellVolume;
+    public $buyVolume;
+
     public function __construct(ClientInterface $client)
     {
         $this->client = $client;
@@ -27,6 +30,8 @@ class Analytics
         $baseSellAmount = 0;
         $baseBuyAmount = 0;
         $dt = (new \DateTime())->setTimezone( new \DateTimeZone("UTC"));
+        $this->sellVolume = 0;
+        $this->buyVolume = 0;
 
         $this->client->getPairTrades($pair, function(Trade $item)use($dt, $interval, &$sellAmount, &$buyAmount, &$baseSellAmount, &$baseBuyAmount){
 
@@ -34,11 +39,13 @@ class Analytics
             {
                 $sellAmount += $item->value;
                 $baseSellAmount += $item->value * $item->price;
+                $this->sellVolume += $item->value;
             }
             else
             {
                 $buyAmount +=$item->value;
                 $baseBuyAmount += $item->value * $item->price;
+                $this->buyVolume += $item->value;
             }
 
 
