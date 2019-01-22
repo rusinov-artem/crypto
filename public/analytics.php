@@ -15,4 +15,6 @@ $pair = "BCHSVUSD";
 
 $analytics = \Crypto\ServiceProvider::getAnalytics($hit);
 
-var_dump($analytics->getUltraIndex($pair, 0.01, new DateInterval("PT5M")));
+var_dump($analytics->getUltraIndex($pair, 0.01, new DateInterval("P1D")));
+var_dump("sell = $analytics->sellVolume");
+var_dump("buy = $analytics->buyVolume");

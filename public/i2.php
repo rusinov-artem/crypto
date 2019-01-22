@@ -9,5 +9,6 @@ $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.
 
 $pair = "BCHSVUSD";
 
-$bots = \Crypto\Bot\BotFactory::spreadMartinSV(92, $hit);
-//foreach ($bots as $bot) {$bs->saveBot($bot);}
+$bots = \Crypto\Bot\BotFactory::simple($pair, 0.1, 74.9, 0.2, 1);
+
+$bs->saveBot($bots);

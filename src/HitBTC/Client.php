@@ -93,86 +93,91 @@ Class Client implements ClientInterface
     {
 
         $error = json_decode((string) $response->getBody(), true);
-        $eMessage = "{$error['message']} ({$error['description']})";
+        $eMessage = "{$error['error']['message']} ({$error['error']['description']})";
 
         if(in_array($response->getStatusCode(), [500, 502, 504]))
         {
             return new ExchangeError($eMessage);
         }
 
-        if($error['code'] == 403 || $error['code'] == 1003)
+        if($error['error']['code'] == 403 || $error['error']['code'] == 1003)
         {
             return new ActionIsForbidden($eMessage);
         }
 
-        if($error['code'] == 429)
+        if($error['error']['code'] == 429)
         {
             return new TooManyRequests($eMessage);
         }
 
-        if($error['code'] == 1001  || $error['code'] == 1001)
+        if($error['error']['code'] == 1001  || $error['error']['code'] == 1001)
         {
             return new AuthorisationFail($eMessage);
         }
 
-        if($error['code'] == 2001)
+        if($error['error']['code'] == 2001)
         {
             return new PairNotFound($eMessage);
         }
 
-        if($error['code'] == 2002)
+        if($error['error']['code'] == 2002)
         {
             return new CurrencyNotFound($eMessage);
         }
 
-        if($error['code'] == 2010)
+        if($error['error']['code'] == 2010)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 2011)
+        if($error['error']['code'] == 2011)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 2012)
+        if($error['error']['code'] == 2012)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 2020)
+        if($error['error']['code'] == 2020)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 2021)
+        if($error['error']['code'] == 2021)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 2022)
+        if($error['error']['code'] == 2022)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 20001)
+        if($error['error']['code'] == 20001)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 20003)
+        if($error['error']['code'] == 20003)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 20002)
+        if($error['error']['code'] == 20002)
         {
             return new OrderNotFound(new Order());
         }
 
-        if($error['code'] == 10001)
+        if($error['error']['code'] == 10001)
         {
             return new ValidationError(new Order());
+        }
+
+        if($error['error']['code'] == 2001)
+        {
+            return new PairNotFound($eMessage);
         }
 
         return new UnknownError($eMessage);
@@ -536,6 +541,23 @@ Class Client implements ClientInterface
 
             return $orderBook;
         }
+        else
+        {
+            $error = json_decode((string) $response->getBody(), true);
+            if(array_key_exists('error', $error))
+            {
+                $eMessage = "{$error['error']['message']} ({$error['error']['description']})";
+
+
+                if($error['error']['code'] == 2001)
+                {
+                    throw new PairNotFound("Pair $pairID not found" );
+                }
+            }
+        }
+
+
+
 
         throw $this->handleErrorResponse($response);
 
@@ -605,6 +627,52 @@ Class Client implements ClientInterface
         }
 
         return $response;
+    }
+
+    public function getBuyPrice($pairID, $volume)
+    {
+        $result = 0;
+
+        $ob = $this->getOrderBook($pairID);
+
+        foreach ($ob->ask as $bookItem)
+        {
+            if($bookItem->size > $volume)
+            {
+                $result += $volume * $bookItem->price;
+                return $result;
+            }
+            else
+            {
+                $result += $bookItem->size * $bookItem->price;
+                $volume -= $bookItem->size;
+            }
+        }
+
+        return null;
+    }
+
+    public function getSellPrice($pairID, $volume)
+    {
+        $result = 0;
+
+        $ob = $this->getOrderBook($pairID);
+
+        foreach ($ob->bid as $bookItem)
+        {
+            if($bookItem->size > $volume)
+            {
+                $result += $volume * $bookItem->price;
+                return $result;
+            }
+            else
+            {
+                $result += $bookItem->size * $bookItem->price;
+                $volume -= $bookItem->size;
+            }
+        }
+
+        return null;
     }
 
 }
