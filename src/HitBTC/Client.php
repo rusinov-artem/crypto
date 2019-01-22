@@ -520,8 +520,8 @@ Class Client implements ClientInterface
             foreach ($data['ask'] as $item)
             {
                 $i = new OrderBookItem();
-                $i->price = $item['price'];
-                $i->size = $item['size'];
+                $i->price = (double)$item['price'];
+                $i->size = (double)$item['size'];
                 $orderBook->ask[] = $i;
             }
             unset($item);
@@ -529,8 +529,8 @@ Class Client implements ClientInterface
             foreach ($data['bid'] as $item)
             {
                 $i = new OrderBookItem();
-                $i->price = $item['price'];
-                $i->size = $item['size'];
+                $i->price = (double)$item['price'];
+                $i->size = (double)$item['size'];
                 $orderBook->bid[] = $i;
             }
 
