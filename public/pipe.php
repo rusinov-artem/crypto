@@ -7,6 +7,20 @@ $bs = new \Crypto\Bot\BotStorage();
 $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
 
 $pairs = $hit->getPairs();
+foreach ($pairs as $pair)
+{
+    if(strpos($pair->baseCurrency, "BITS") !== false)
+    {
+        var_dump($pair);
+    }
+
+    if(strpos($pair->quoteCurrency, "BITS") !== false)
+    {
+        var_dump($pair);
+    }
+
+
+}
 //var_dump($pairs["DASHUSD"]);
 //var_dump($pairs["DASHBTC"]);die();
 
@@ -17,21 +31,44 @@ if(isset($argv[1]))
     $token = $argv[1];
 }
 
-$tokens =
+$pairs =
     [
-      "BCHSV", "BCHABC", "VOCO", "EDO", "ETC", "LTC", "EOS", "ZEC",
-      "TRX", "DASH", "XLM", "DOGE", "XDN", "XEM", "MAID", "BTG",
-      "BNT", "ONT", "SMART", "NEO",
-      "XMR", "ADA", "QTUM", "IOTA",  "BITS", "PPC",
-      "WIKI", "EDG", "TDS", "FUN", "STX", "LOC", "DIM"
+        ["EOSBTC", "EOSUSD"],
+        ["BCHABCBTC", "BCHABCUSD"],
+        ["BCNBTC", "BCNUSD"],
+        ["NXTBTC", "NXTUSD"],
+        ["ETHBTC", "ETHUSD"],
+        ["DASHBTC", "DASHUSD"],
+        ["ZECBTC", "ZECUSD"],
+        ["XLMBTC", "XLMUSD"],
+        ["DOGEBTC", "DOGEUSD"],
+        ["TRXBTC", "TRXUSD"],
+        ["ETCBTC", "ETCUSD"],
+        ["XEMBTC", "XEMUSD"],
+        ["EOSBTC", "EOSUSD"],
+        ["ADABTC", "ADAUSD"],
+        ["BITSBTC", "BITSUSD"],
+        ["BCHSVBTC", "BCHSVUSD"],
+        ["VOCOBTC", "VOCOUSD"],
+        ["LTCBTC", "LTCUSD"],
+        ["EDOBTC", "EDOUSD"],
+        ["XRPBTC", "XRPUSDT"],
+        ["TRXBTC", "TRXUSD"],
+        ["PATBTC", "PATUSD"],
+        ["CSMBTC", "CSMUSD"],
+        ["KMDBTC", "KMDUSD"],
+        ["STXBTC", "STXUSD"],
+        ["STXBTC", "STXUSD"],
+        ["XDN"."BTC", "XDN"."USD"],
+
     ];
 
 while(1)
-foreach($tokens as $token) {
+foreach($pairs as $pair) {
 
     $pair1 = "BTCUSD";
-    $pair2 = "{$token}BTC";
-    $pair3 = "{$token}USD";
+    $pair2 = $pair[0];
+    $pair3 = $pair[1];
 
 
 
@@ -67,12 +104,13 @@ foreach($tokens as $token) {
 
 
 
+    $dt = (new DateTime)->format("Y-m-d H:i:s");
     if ($profit > 0) {
-        var_dump("$ => BTC => BCHSV => $ PROFIT = " . ($profit));
+        var_dump("$dt $ => BTC => $token => $ PROFIT = " . ($profit));
     }
     else
     {
-        //var_dump($profit, $fee);
+        //var_dump("$pair2 $profit, $fee");
     }
 
 }
