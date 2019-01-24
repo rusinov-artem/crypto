@@ -16,17 +16,16 @@ class BotFactory
         $bot->circles = $retry;
 
         $inOrder = new Order();
-        $inOrder->side = 'buy';
+        $inOrder->side = $volume > 0 ? 'buy' : 'sell';
         $inOrder->pairID = $pairID;
         $inOrder->price = $buyPrice;
-        $inOrder->value = $volume;
+        $inOrder->value = abs($volume);
 
         $bot->inOrder = $inOrder;
 
         $outOrder = clone $inOrder;
-        $outOrder -> side = 'sell';
-        $outOrder->price += $deltaPrice;
-
+        $outOrder->side = $volume > 0 ? 'sell' : 'buy';
+        $outOrder->price += ( $volume <=> 0 ) * abs($deltaPrice);
         $bot->outOrder = $outOrder;
 
         if($botID !== null)
@@ -49,14 +48,15 @@ class BotFactory
      * @param float $deltaPrice
      * @param int $count
      * @return CircleBot[]
+     * @throws \Exception
      */
     public static function spreadAttack(string $pairID, float $lVolume, float $buyPrice, float $priceStep, float $deltaPrice, int $count)
     {
         $result = [];
         for($i=0; $i<$count; $i++)
         {
-            $price = $buyPrice - ($priceStep * $i);
-            $bot = self::simple($pairID, $lVolume, $price, $deltaPrice, $i+1, random_int(0,1000) );
+            $price = $buyPrice - ( $lVolume <=> 0 ) * ($priceStep * $i);
+            $bot = self::simple($pairID, $lVolume, $price, $deltaPrice, $i+1);
             $bot->id = "spread_".$bot->id;
             $result[] = $bot;
         }
