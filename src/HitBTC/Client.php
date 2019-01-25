@@ -172,7 +172,7 @@ Class Client implements ClientInterface
 
         if($error['error']['code'] == 10001)
         {
-            return new ValidationError(new Order());
+            return new ValidationError($error['error']['message'].'. '.$error['error']['description']);
         }
 
         if($error['error']['code'] == 2001)
@@ -264,7 +264,7 @@ Class Client implements ClientInterface
             $order->eOrderID = $data['id'];
             $order->side = $data['side'];
             $order->value = (float)$data['quantity'];
-            $order->price = (float)$data['price'];
+            $order->price = (float)$data['price'] ?? null;
             $order->date = new \DateTime($data['createdAt']);
             $order->status = $data['status'];
             $order->traded = (float)$data['cumQuantity'];
@@ -274,12 +274,6 @@ Class Client implements ClientInterface
         }
 
         $ex = $this->handleErrorResponse($response);
-
-        if($ex instanceof OrderRejected)
-        {
-            $ex->order = $order;
-            throw new $ex;
-        }
 
         throw $ex;
 

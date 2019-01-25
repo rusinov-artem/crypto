@@ -16,8 +16,8 @@ class Order
     public $side; //"buy" or "sell"
     public $traded = 0; //Количество проданых\купленных монет
     public $status; // new, suspended, partiallyFilled, filled, canceled, expired
-    public $type = "limit"; //limit, market
-    public $timeInForce = 'GTC';
+    public $type = "limit"; //limit, market (limit, market, stopLimit, stopMarket)
+    public $timeInForce = 'GTC'; //GTC, IOC, FOK, Day, GTD
 
     public function isActive()
     {
