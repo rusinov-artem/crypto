@@ -9,12 +9,12 @@ $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.
 $pairs = $hit->getPairs();
 foreach ($pairs as $pair)
 {
-    if(strpos($pair->baseCurrency, "BITS") !== false)
+    if(strpos($pair->baseCurrency, "SPC") !== false)
     {
         var_dump($pair);
     }
 
-    if(strpos($pair->quoteCurrency, "BITS") !== false)
+    if(strpos($pair->quoteCurrency, "SPC") !== false)
     {
         var_dump($pair);
     }
@@ -30,6 +30,36 @@ if(isset($argv[1]))
 {
     $token = $argv[1];
 }
+
+$pairs =
+    [
+        ["EOSETH", "EOSUSD"],
+        ["BCNETH", "BCNUSD"],
+        ["NXTETH", "NXTUSD"],
+        ["DASHETH", "DASHUSD"],
+        ["ZECETH", "ZECUSD"],
+        ["XLMETH", "XLMUSD"],
+        ["DOGEETH", "DOGEUSD"],
+        ["TRXETH", "TRXUSD"],
+        ["ETCETH", "ETCUSD"],
+        ["XEMETH", "XEMUSD"],
+        ["EOSETH", "EOSUSD"],
+        ["ADAETH", "ADAUSD"],
+        ["BITSETH", "BITSUSD"],
+        ["VOCOETH", "VOCOUSD"],
+        ["LTCETH", "LTCUSD"],
+        ["EDOETH", "EDOUSD"],
+        ["XRPETH", "XRPUSDT"],
+        ["TRXETH", "TRXUSD"],
+        ["PATETH", "PATUSD"],
+        ["CSMETH", "CSMUSD"],
+        ["KMDETH", "KMDUSD"],
+        ["STXETH", "STXUSD"],
+        ["STXETH", "STXUSD"],
+        ["XDN"."ETH", "XDN"."USD"],
+
+    ];
+
 
 $pairs =
     [
@@ -60,8 +90,17 @@ $pairs =
         ["STXBTC", "STXUSD"],
         ["STXBTC", "STXUSD"],
         ["XDN"."BTC", "XDN"."USD"],
+        ["DCN"."BTC", "DCN"."USD"],
+        ["CMCT"."BTC", "CMCT"."USD"],
+        ["KMD"."BTC", "KMD"."USD"],
+        ["B2X"."BTC", "B2X"."USD"],
+        ["SBTC"."BTC", "SBTC"."USDT"],
+        ["SPC"."BTC", "SPCUSD"],
+        ["CAT"."BTC", "CAT"."USD"],
+        ["MTX"."BTC", "MTX"."USD"],
 
     ];
+
 
 while(1)
 foreach($pairs as $pair) {
@@ -106,7 +145,7 @@ foreach($pairs as $pair) {
 
     $dt = (new DateTime)->format("Y-m-d H:i:s");
     if ($profit > 0) {
-        var_dump("$dt $ => BTC => $token => $ PROFIT = " . ($profit));
+        var_dump("$dt $ => $pair2 => $pair3 => $ PROFIT = " . ($profit));
     }
     else
     {
