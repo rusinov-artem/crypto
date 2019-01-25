@@ -17,6 +17,7 @@ class Order
     public $traded = 0; //Количество проданых\купленных монет
     public $status; // new, suspended, partiallyFilled, filled, canceled, expired
     public $type = "limit"; //limit, market
+    public $timeInForce = 'GTC';
 
     public function isActive()
     {

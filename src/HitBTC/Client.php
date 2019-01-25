@@ -248,8 +248,8 @@ Class Client implements ClientInterface
         $response =  $this->request("POST", 'order', [
             'symbol' => $order->pairID,
             'side' => $order->side,
-            'type' => 'limit',
-            'timeInForce' => 'GTC',
+            'type' => $order->type,
+            'timeInForce' => $order->timeInForce,
             'quantity' => $order->value,
             'price' => $order->price,
         ]);
