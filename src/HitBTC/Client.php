@@ -167,7 +167,7 @@ Class Client implements ClientInterface
 
         if($error['error']['code'] == 20002)
         {
-            return new OrderNotFound(new Order());
+            return new OrderNotFound('');
         }
 
         if($error['error']['code'] == 10001)
@@ -667,6 +667,60 @@ Class Client implements ClientInterface
         }
 
         return null;
+    }
+
+    /**
+     * @return Order[]
+     * @throws \Exception
+     */
+    public function getOrdersHistory()
+    {
+        $response = $this->request("GET", "history/order", []);
+
+        $result = [];
+        if($response->getStatusCode() == 200)
+        {
+            $data = json_decode((string) $response->getBody() ,true);
+
+
+            foreach($data as $item)
+            {
+                $order = new Order();
+                $order->pairID = $item['symbol'];
+                $order->eClientOrderID = $item['clientOrderId'];
+                $order->eOrderID = $item['id'];
+                $order->side = $item['side'];
+                $order->value = (float)$item['quantity'];
+                $order->price = (float)$item['price'];
+                $order->date =  new \DateTime($item['createdAt']);
+                $order->status = $item['status'];
+                $order->traded = (float)$item['cumQuantity'];
+
+                $result[$order->eOrderID] = $order;
+
+            }
+
+            return $result;
+        }
+
+
+        $ex =  $this->handleErrorResponse($response);
+        throw  $ex;
+
+    }
+
+    public function isOrderCanceled( Order $order )
+    {
+        $orders = $this->getOrdersHistory();
+
+        if(!array_key_exists($order->eOrderID, $orders))
+        {
+            return false;
+        }
+
+        $order = $orders[$order->eOrderID];
+
+        return ($order->status === 'canceled');
     }
 
 }

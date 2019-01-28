@@ -42,8 +42,21 @@ class BotNext
      */
     public $dispatcher;
 
+    public $finished = false;
+
+    public function setFinished($finished = true)
+    {
+        $this->finished = $finished;
+    }
+
     public function isFinished()
     {
+
+        if($this->finished)
+        {
+            return true;
+        }
+
         if($this->inOrder->status === 'filled' && $this->outOrder->status === 'filled')
         {
             return true;
@@ -127,7 +140,8 @@ class BotNext
             if($ob->getBestAsk()->price <= $this->inOrder->price )
             {
                 $this->log("WARNING! Order will not be placed cose actual price lower then buy order price");
-                return false;
+                throw new \Exception('actual price lower then buy order price');
+                //return false;
             }
         }
         elseif($this->inOrder->side === 'sell')
@@ -135,7 +149,8 @@ class BotNext
             if($ob->getBestBid()->price >= $this->inOrder->price )
             {
                 $this->log("WARNING! Order will not be placed cose actual price higher then sell order price");
-                return false;
+                throw new \Exception("actual price higher then sell order price");
+                //return false;
             }
         }
         else
@@ -194,7 +209,6 @@ class BotNext
         }
     }
 
-
     public function calculateProfit()
     {
         $inOrderV = $this->inOrder->price * $this->inOrder->value;
@@ -224,5 +238,36 @@ class BotNext
           $this->outOrder,
         ];
     }
+
+    /**
+     * @return Order[]
+     */
+    public function &getActiveOrders()
+    {
+        $result = [];
+        $actionOrder =
+            [
+              'createInOrder' => 'inOrder',
+              'checkInOrder'  => 'inOrder',
+              'checkOutOrder' => 'outOrder',
+            ];
+
+        $action = $this->getAction();
+
+        if(!$action) return $result;
+
+        $action = $action['action'][1];
+
+        if(array_key_exists($action, $actionOrder))
+        {
+            $result = [];
+            $result[0] = &$this->{$actionOrder[$action]};
+            return $result;
+        }
+
+        return [];
+
+    }
+
 
 }

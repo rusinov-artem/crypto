@@ -13,6 +13,12 @@ class CircleBot extends BotNext
     public function checkOutOrder()
     {
         $this->log('Checking out order');
+
+        if($this->outOrder->eOrderID === null && $this->outOrder->eClientOrderID === null)
+        {
+            $this->client->createOrder($this->outOrder);
+        }
+
         $status = $this->client->getOrderStatus($this->outOrder);
 
         if('filled' === $status)
