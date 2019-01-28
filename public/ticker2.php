@@ -34,17 +34,31 @@ function tickBots(array $bots, $hit, $bs, $timeout, $limit=3)
      * @var $hit Client
      * @var $activeOrder Order
      * @var $bs BotStorage
+     * @var $bots \Crypto\Bot\BotNext[]
      */
 
     $placedOrders = $hit->getActiveOrders();
+    $ob = $hit->getOrderBook(current($bots)->inOrder->pairID);
 
     $si = 0;
     foreach ($bots as $bot)
     {
+
         if($si <=$limit)
         {
             try {
                 $activeOrder = current($bot->getActiveOrders());
+
+                if($activeOrder->side === 'buy' && $activeOrder->price > $ob->getBestAsk()->price)
+                {
+                    continue;
+                }
+
+                if($activeOrder->side === 'sell' && $activeOrder->price < $ob->getBestBid()->price)
+                {
+                    continue;
+                }
+
 
                 if($hit->isOrderCanceled($activeOrder))
                 {
@@ -56,6 +70,11 @@ function tickBots(array $bots, $hit, $bs, $timeout, $limit=3)
                 $bot->tick();
                 usleep($timeout);
                 $si++;
+
+                if($activeOrder->eClientOrderID === null && $activeOrder->eOrderID === null)
+                {
+                    $activeOrder->status = null;
+                }
 
                 $bs->saveBot($bot);
 
