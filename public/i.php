@@ -11,8 +11,8 @@ $pair = "BCHSVUSD";
 //$pair = "EDOUSD";
 //$pair = "BTCUSD";
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, -0.001, 65.65, 0.05, 0.05, 1000);
+$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, -0.001, 63.2, 0.05, 0.05, 1000);
 foreach ($bots as $bot) {$bs->saveBot($bot);}
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 0.001, 65.55, 0.05, 0.05, 200);
+$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 0.001, 63.15, 0.05, 0.05, 200);
 foreach ($bots as $bot) {$bs->saveBot($bot);}
