@@ -86,12 +86,15 @@ foreach ($active as $order)
     $tProfit += $order->price * $order->value;
 }
 
+$bchsvBalance = $pairBalance->available + $pairBalance->reserved;
+
 $result =
 ("\nUSD now $usdEstimate\n").
 ("USD best case $usdBestCase\n").
 ("USD ultimate case $ultimateCase\n").
 ("current profit $profit\n").
-"tprofit = $tProfit\n";
+"tprofit = $tProfit\n".
+"BCHSV balance = $bchsvBalance";
 
 var_dump($result);
 

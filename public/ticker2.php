@@ -6,16 +6,18 @@
  * Time: 4:43 PM
  */
 
+use Crypto\Bot\BotStorage as BotStorage;
 use Crypto\Bot\CircleBot as CircleBot;
 use Crypto\Exchange\Order;
+use Crypto\HitBTC\Client as Client;
 
 require __DIR__."/../vendor/autoload.php";
 $config = include __DIR__ . "/../config.php";
 
 
 $counter = 0;
-$bs = new \Crypto\Bot\BotStorage();
-$hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
+$bs = new BotStorage();
+$hit = new Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
 
 $handler = new \Monolog\Handler\RotatingFileHandler(__DIR__."/../storage/log/main.log", 3);
 $logger = new \Monolog\Logger("hitbtc.client");
@@ -26,7 +28,76 @@ $botLogger->pushHandler($handler);
 
 $hit->setLogger($logger);
 
+function tickBots(array $bots, $hit, $bs, $timeout, $limit=3)
+{
+    /**
+     * @var $hit Client
+     * @var $activeOrder Order
+     * @var $bs BotStorage
+     */
 
+    $placedOrders = $hit->getActiveOrders();
+
+    $si = 0;
+    foreach ($bots as $bot)
+    {
+        if($si <=$limit)
+        {
+            try {
+                $activeOrder = current($bot->getActiveOrders());
+
+                if($hit->isOrderCanceled($activeOrder))
+                {
+                    $bot->setFinished();
+                    $bs->saveBot($bot);
+                    continue;
+                }
+                $bot->client = $hit;
+                $bot->tick();
+                usleep($timeout);
+                $si++;
+
+                $bs->saveBot($bot);
+
+
+            } catch (\Throwable $t) {
+                var_dump($t->getMessage());
+            }
+        }
+        else
+        {
+            try{
+
+                $activeOrders = ($bot->getActiveOrders());
+
+
+
+                if(count($activeOrders)<1) {
+                    continue;
+                }
+
+                $activeOrder = &$activeOrders[key($activeOrders)];
+
+                if(!array_key_exists($activeOrder->eClientOrderID, $placedOrders))
+                {
+                    continue;
+                }
+
+                if($activeOrder->traded > 0 ) continue;
+
+                $hit->closeOrder($activeOrder);
+                $activeOrder->status = null;
+                $activeOrder->eClientOrderID = null;
+                $activeOrder->eOrderID = null;
+                $bs->saveBot($bot);
+            }
+            catch (\Throwable $t){
+                var_dump($t->getMessage());
+            }
+        }
+
+    }
+}
 
 while(1)
 {
@@ -85,68 +156,9 @@ while(1)
         return $bPrice <=> $aPrice;
     });
 
-    $si = 0;
-    foreach ($sellBots as $bot)
-    {
-        try {
-            $activeOrder = current($bot->getActiveOrders());
-            $orderBefore = clone $activeOrder;
+    tickBots($sellBots, $hit, $bs, $timeout, 3);
+    tickBots($buyBots, $hit, $bs, $timeout, 3);
 
-            if($hit->isOrderCanceled($activeOrder))
-            {
-                $bot->setFinished();
-                $bs->saveBot($bot);
-                continue;
-            }
-
-            $bot->client = $hit;
-            $bot->tick();
-            usleep($timeout);
-            $si++;$counter++;
-            $orderAfter = clone current($bot->getActiveOrders());
-
-            $bs->saveBot($bot);
-
-            if ($si >= 3) {
-                break;
-            }
-
-        } catch (\Throwable $t) {
-
-        }
-
-    }
-
-    $si = 0;
-    foreach ($buyBots as $bot)
-    {
-        try {
-            $activeOrder = current($bot->getActiveOrders());
-            $orderBefore = clone $activeOrder;
-
-            if($hit->isOrderCanceled($activeOrder))
-            {
-                $bot->setFinished();
-                $bs->saveBot($bot);
-                continue;
-            }
-            $bot->client = $hit;
-            $bot->tick();
-            usleep($timeout);
-            $si++;$counter++;
-            $orderAfter = clone current($bot->getActiveOrders());
-
-            $bs->saveBot($bot);
-
-            if ($si >= 3) {
-                break;
-            }
-
-        } catch (\Throwable $t) {
-
-        }
-
-    }
-
+    $counter++;
     var_dump($counter);
 }
