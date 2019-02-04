@@ -8,6 +8,7 @@ class CircleBot extends BotNext
 {
     public $circles = 3;
     public $currentCircle = 0;
+    public $profit = 0;
 
 
     public function checkOutOrder()
@@ -26,7 +27,10 @@ class CircleBot extends BotNext
             $this->currentCircle++;
             $this->log("Circle #{$this->currentCircle} passed");
 
-            if( ($this->currentCircle <= $this->circles) || $this->circles <=0 )
+            $this->profit += $this->calculateProfit();
+            $this->log("PROFIT {$this->profit}");
+
+            if(1 || ($this->currentCircle <= $this->circles) || $this->circles <=0 )
             {
                 $this->renew();
                 $this->log("Bot renewed");
