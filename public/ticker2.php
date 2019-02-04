@@ -44,7 +44,7 @@ function tickBots(array $bots, $hit, $bs, $timeout, $limit=3)
     foreach ($bots as $bot)
     {
 
-        if($si <=$limit)
+        if($si < $limit)
         {
             try {
                 $activeOrder = current($bot->getActiveOrders());
@@ -117,67 +117,97 @@ function tickBots(array $bots, $hit, $bs, $timeout, $limit=3)
 
     }
 }
-
-while(1)
-{
-
-    $bots = $bs->getAll();
-    if(count($bots)<1)
+m1:
+try{
+    while(1)
     {
-        sleep(1); continue;
-    }
 
-    $timeout = (1) * pow(10, 6);
+        $bots = $bs->getAll();
+        if(count($bots)<1)
+        {
+            sleep(1); continue;
+        }
 
-    $botsList = [];
-    foreach ($bots as $botID)
-    {
-        $botsList[] = $bs->getBot($botID);
-    }
+        $timeout = (0.5) * pow(10, 6);
 
-    $sellBots=[];
-    $buyBots=[];
+        $botsList = [];
+        foreach ($bots as $botID)
+        {
+            /**
+             * @var $bot CircleBot
+             */
+            $bot = $bs->getBot($botID);
 
-    /**
-     * @var $bot CircleBot
-     */
-    foreach ($botsList as $bot)
-    {
-        if($bot->isFinished()) continue;
+
+            $botsList[] = $bot;
+        }
+
+        $sellBots=[];
+        $buyBots=[];
 
         /**
-         * @var $activeOrders Order[]
+         * @var $bot CircleBot
          */
-        $activeOrders = $bot->getActiveOrders();
-        if(count($activeOrders)===1)
+        foreach ($botsList as $bot)
         {
-            if(current($activeOrders)->side === 'sell')
-            {
-                $sellBots[] = $bot;
-            }
+            if($bot->isFinished()) continue;
 
-            if(current($activeOrders)->side === 'buy')
+            /**
+             * @var $activeOrders Order[]
+             */
+            $activeOrders = $bot->getActiveOrders();
+            if(count($activeOrders)===1)
             {
-                $buyBots[] = $bot;
+                if(current($activeOrders)->side === 'sell')
+                {
+                    if(!isset($sellBots[$bot->inOrder->pairID]))
+                    {
+                        $sellBots[$bot->inOrder->pairID] = [];
+                    }
+
+                    $sellBots[$bot->inOrder->pairID][] = $bot;
+                }
+
+                if(current($activeOrders)->side === 'buy')
+                {
+                    if(!isset($buyBots[$bot->inOrder->pairID]))
+                    {
+                        $buyBots[$bot->inOrder->pairID] = [];
+                    }
+
+                    $buyBots[$bot->inOrder->pairID][] = $bot;
+                }
             }
         }
+
+        foreach ($sellBots as &$sellBotsPair)
+        {
+            $r = usort($sellBotsPair, function(CircleBot $a, CircleBot $b) {
+                $aPrice = current($a->getActiveOrders())->price;
+                $bPrice = current($b->getActiveOrders())->price;
+                return $aPrice <=> $bPrice;
+            });
+
+            tickBots($sellBotsPair, $hit, $bs, $timeout, 1);
+        }
+
+        foreach ($buyBots as &$buyBotsPair)
+        {
+            $r = usort($buyBotsPair, function(CircleBot $a, CircleBot $b) {
+                $aPrice = current($a->getActiveOrders())->price;
+                $bPrice = current($b->getActiveOrders())->price;
+                return $bPrice <=> $aPrice;
+            });
+
+            tickBots($buyBotsPair, $hit, $bs, $timeout, 1);
+        }
+
+        $counter++;
+        var_dump($counter);
     }
-
-    $r = usort($sellBots, function(CircleBot $a, CircleBot $b) {
-        $aPrice = current($a->getActiveOrders())->price;
-        $bPrice = current($b->getActiveOrders())->price;
-        return $aPrice <=> $bPrice;
-    });
-
-    $r = usort($buyBots, function(CircleBot $a, CircleBot $b) {
-        $aPrice = current($a->getActiveOrders())->price;
-        $bPrice = current($b->getActiveOrders())->price;
-        return $bPrice <=> $aPrice;
-    });
-
-    tickBots($sellBots, $hit, $bs, $timeout, 3);
-    tickBots($buyBots, $hit, $bs, $timeout, 3);
-
-    $counter++;
-    var_dump($counter);
+}
+catch (\Throwable $t)
+{
+    var_dump($t);
+    goto m1;
 }
