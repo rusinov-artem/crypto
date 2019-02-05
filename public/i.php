@@ -8,21 +8,15 @@ $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.
 
 
 $pair = "BCHSVUSD";
-$pair = "TRXUSD";
 //$pair = "EDOUSD";
 //$pair = "BTCUSD";
+//$pair = "EOSUSD";
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 1, 0.026, 0.0001, 0.0002, 10);
+$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 0.005, 63.099, 0.031, 0.03, 500);
 foreach ($bots as $bot) {$bs->saveBot($bot);}
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, -1, 0.027,  0.0001, 0.0005, 4);
+$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, -0.005, 63.2, 0.031, 0.03, 500);
 foreach ($bots as $bot) {$bs->saveBot($bot);}
 
 
-$pair = "EDOUSD";
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 0.01, 0.64, 0.01, 0.1, 10);
-foreach ($bots as $bot) {$bs->saveBot($bot);}
-
-$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, -0.01, 0.75,  0.01, 0.1, 4);
-foreach ($bots as $bot) {$bs->saveBot($bot);}

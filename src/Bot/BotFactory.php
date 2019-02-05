@@ -56,7 +56,7 @@ class BotFactory
         for($i=0; $i<$count; $i++)
         {
             $price = $buyPrice - ( $lVolume <=> 0 ) * ($priceStep * $i);
-            $bot = self::simple($pairID, $lVolume, $price, $deltaPrice, $i+1);
+            $bot = self::simple($pairID, $lVolume, $price, $deltaPrice, 100);
             $bot->id = "spread_".$bot->id;
             $result[] = $bot;
         }

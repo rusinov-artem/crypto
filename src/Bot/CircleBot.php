@@ -30,7 +30,7 @@ class CircleBot extends BotNext
             $this->profit += $this->calculateProfit();
             $this->log("PROFIT {$this->profit}");
 
-            if(1 || ($this->currentCircle <= $this->circles) || $this->circles <=0 )
+            if(($this->currentCircle < $this->circles) || $this->circles <=0 )
             {
                 $this->renew();
                 $this->log("Bot renewed");
