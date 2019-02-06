@@ -49,15 +49,10 @@ foreach ($bots as $botID)
     }
     if($bot->profit > 0 ) $botsWithProfit++;
 
-    if($bot->outOrder->price === 63.3)
+    if(1)
     {
-        $bot->outOrder->value = 0.1;
         $bot->finished = false;
-        $bot->outOrder->status = null;
-        $bot->outOrder->eOrderID = null;
-        $bot->outOrder->eClientOrderID = null;
         $bs->saveBot($bot);
-        var_dump($bot);
     }
 
 

@@ -8,6 +8,7 @@
 
 use Crypto\Bot\BotStorage as BotStorage;
 use Crypto\Bot\CircleBot as CircleBot;
+use Crypto\Exchange\Exceptions\OrderRejected as OrderRejected;
 use Crypto\Exchange\Order;
 use Crypto\HitBTC\Client as Client;
 
@@ -67,7 +68,16 @@ function tickBots(array $bots, $hit, $bs, $timeout, $limit=3)
                     continue;
                 }
                 $bot->client = $hit;
-                $bot->tick();
+                try{
+                    $bot->tick();
+                }
+                catch (OrderRejected $e)
+                {
+                   $bot->finished = true;
+                   $bs->saveBot($bot);
+                   continue;
+                }
+
                 usleep($timeout);
                 $si++;
 
@@ -122,13 +132,15 @@ try{
     while(1)
     {
 
+        $hit->activeOrders = null;
+
         $bots = $bs->getAll();
         if(count($bots)<1)
         {
             sleep(1); continue;
         }
 
-        $timeout = (0.5) * pow(10, 6);
+        $timeout = 0;
 
         $botsList = [];
         foreach ($bots as $botID)
@@ -188,7 +200,7 @@ try{
                 return $aPrice <=> $bPrice;
             });
 
-            tickBots($sellBotsPair, $hit, $bs, $timeout, 1);
+            tickBots($sellBotsPair, $hit, $bs, $timeout, 20);
         }
 
         foreach ($buyBots as &$buyBotsPair)
@@ -199,7 +211,7 @@ try{
                 return $bPrice <=> $aPrice;
             });
 
-            tickBots($buyBotsPair, $hit, $bs, $timeout, 1);
+            tickBots($buyBotsPair, $hit, $bs, $timeout, 20);
         }
 
         $counter++;
