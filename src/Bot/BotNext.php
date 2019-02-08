@@ -21,6 +21,7 @@ class BotNext
     use Loggable;
 
     public $id;
+    public $groupID;
 
     /**
      * @var Order

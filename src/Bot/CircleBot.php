@@ -4,6 +4,8 @@
 namespace Crypto\Bot;
 
 
+use Crypto\Exchange\Order;
+
 class CircleBot extends BotNext
 {
     public $circles = 3;
@@ -39,10 +41,19 @@ class CircleBot extends BotNext
 
     }
 
-    private function renew()
+    public function renew()
     {
-
-        $this->inOrder->status = null;
-        $this->outOrder->status = null;
+        $this->renewOrder($this->inOrder);
+        $this->renewOrder($this->outOrder);
+        $this->finished = false;
     }
+
+    public function renewOrder(Order $order)
+    {
+        $order->status = null;
+        $order->eClientOrderID = null;
+        $order->eOrderID = null;
+        return $this;
+    }
+
 }
