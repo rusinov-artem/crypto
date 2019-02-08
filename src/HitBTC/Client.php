@@ -32,6 +32,8 @@ Class Client implements ClientInterface
 
     public $apiKey;
     public $secretKey;
+    public $activeOrders = null;
+    public $trades = [];
 
     /**
      * @var \GuzzleHttp\Client
@@ -279,6 +281,43 @@ Class Client implements ClientInterface
 
     }
 
+    public function updateOrder(Order &$order)
+    {
+
+        $response =  $this->request("PATCH ", "order/{$order->eClientOrderID}", [
+            'symbol' => $order->pairID,
+            'side' => $order->side,
+            'type' => $order->type,
+            'timeInForce' => $order->timeInForce,
+            'quantity' => $order->value,
+            'price' => $order->price,
+            //'requestClientId'=> $order->eClientOrderID,
+        ]);
+
+        if($response->getStatusCode() == 200) {
+
+            $data = json_decode((string)$response->getBody(), true);
+
+            $order = new Order();
+            $order->pairID = $data['symbol'];
+            $order->eClientOrderID = $data['clientOrderId'];
+            $order->eOrderID = $data['id'];
+            $order->side = $data['side'];
+            $order->value = (float)$data['quantity'];
+            $order->price = (float)$data['price'] ?? null;
+            $order->date = new \DateTime($data['createdAt']);
+            $order->status = $data['status'];
+            $order->traded = (float)$data['cumQuantity'];
+
+
+            return $order;
+        }
+
+        $ex = $this->handleErrorResponse($response);
+
+        throw $ex;
+    }
+
     /**
      * @param Order $order
      * @return Order
@@ -322,8 +361,14 @@ Class Client implements ClientInterface
      * @return Order[]
      * @throws \Exception
      */
-    public function getActiveOrders()
+    public function getActiveOrders($forse = false)
     {
+
+        if($this->activeOrders !== null && $forse === false)
+        {
+            return $this->activeOrders;
+        }
+
         $response = $this->request("GET", 'order', []);
 
         if($response->getStatusCode() == 200)
@@ -346,6 +391,9 @@ Class Client implements ClientInterface
 
                 $result[$order->eClientOrderID] = $order;
             }
+
+            $this->activeOrders = $result;
+
             return $result;
         }
 
