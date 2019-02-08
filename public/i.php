@@ -8,22 +8,62 @@ $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.
 
 
 $pair = "BCHSVUSD";
-//$pair = "EDOUSD";
+$pair = "EDOUSD";
 //$pair = "BTCUSD";
 //$pair = "EOSUSD";
 //$pair = "ETHUSD";
-$pair = "TRXUSD";
+//$pair = "TRXUSD";
+//$pair = "PBTTBTC";
 
-//$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 1, 0.65, 0.01, 0.03, 30);
-//foreach ($bots as $bot) {$bs->saveBot($bot);}
+$bot = \Crypto\Bot\BotFactory::simple($pair, 14, 0.65, 0.2, 10, "EDOUSD-1");
+$bs->saveBot($bot);
 
-//$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 0.05, 58.6, 0.1, 0.2, 60);
-//foreach ($bots as $bot) {$bs->saveBot($bot);}
-//
-//$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, -0.005, 63.2, 0.031, 0.03, 500);
-//foreach ($bots as $bot) {$bs->saveBot($bot);}
+die();
+$bot = \Crypto\Bot\BotFactory::simple($pair, 0.1, 66, 3, 10, "BCHSV-1");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
+
+$bot = \Crypto\Bot\BotFactory::simple($pair, 0.2, 65.5, 4, 10, "BCHSV-2");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
+
+$bot = \Crypto\Bot\BotFactory::simple($pair, 0.3, 65, 5, 10, "BCHSV-3");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
+
+$bot = \Crypto\Bot\BotFactory::simple($pair, 0.4, 64, 2, 10, "BCHSV-4");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
+
+$bot = \Crypto\Bot\BotFactory::simple($pair, 0.5, 63, 2.5, 10, "BCHSV-5");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
+
+$bot = \Crypto\Bot\BotFactory::simple($pair, 0.6, 62, 3, 10, "BCHSV-6");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
+
+$bot = \Crypto\Bot\BotFactory::simple($pair, 0.7, 60, 4, 10, "BCHSV-7");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
+
+$bot = \Crypto\Bot\BotFactory::simple($pair, 0.8, 59, 5, 10, "BCHSV-8");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
+
+$bot = \Crypto\Bot\BotFactory::simple($pair, 0.9, 58, 6, 10, "BCHSV-9");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
+
+$bot = \Crypto\Bot\BotFactory::simple($pair, 1, 57, 18, 10, "BCHSV-10");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
+
+$bot = \Crypto\Bot\BotFactory::simple($pair, 1, 56, 19, 10, "BCHSV-11");
+$bot->groupID = "SP";
+$bs->saveBot($bot);
 
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 25, 0.0255454	, 0.0003, 0.00005, 100);
-foreach ($bots as $bot) {$bs->saveBot($bot);}
+
+
 

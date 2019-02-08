@@ -31,41 +31,14 @@ $hit->setLogger($logger);
 $bots = $bs->getAll();
 
 
-$botsList = [];
-$profit = 0;
-$mProfit = 0;
-$mProfitBot = null;
-$botsWithProfit = 0;
-foreach ($bots as $botID)
+$orders = $hit->getActiveOrders();
+foreach ($orders as $order)
 {
-    /**
-     * @var $bot CircleBot
-     */
-    $botsList[] = $bot =  $bs->getBot($botID);
-    $profit += $bot->profit;
-    if($bot->profit > $mProfit) {
-        $mProfit = $bot->profit;
-        $mProfitBot = clone $bot;
-    }
-    if($bot->profit > 0 ) $botsWithProfit++;
-
-    if(1)
+    if($order->eClientOrderID == '1c2688edf981732bd795828f0a7e279e')
     {
-        $bot->finished = false;
-        $bs->saveBot($bot);
+        $order->price += 0.0001;
+        $order->value += 0.001;
+        $hit->updateOrder($order);
+        var_dump($order->eClientOrderID);
     }
-
-
-
 }
-/**
- * @var $mProfitBot CircleBot
- */
-//$mProfitBot->inOrder->value = 0.5;
-//$mProfitBot->outOrder->value = 0.5;
-//$bs->saveBot($mProfitBot);
-
-var_dump($profit);
-var_dump($mProfit);
-var_dump($botsWithProfit);
-//var_dump($mProfitBot);

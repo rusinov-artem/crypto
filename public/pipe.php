@@ -9,12 +9,12 @@ $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.
 $pairs = $hit->getPairs();
 foreach ($pairs as $pair)
 {
-    if(strpos($pair->baseCurrency, "SPC") !== false)
+    if(strpos($pair->baseCurrency, "PBTT") !== false)
     {
         var_dump($pair);
     }
 
-    if(strpos($pair->quoteCurrency, "SPC") !== false)
+    if(strpos($pair->quoteCurrency, "PBTT") !== false)
     {
         var_dump($pair);
     }
