@@ -47,5 +47,10 @@ class BotStorage
         return file_put_contents($this->directory."/".$bot->id.".bot", $botStr);
     }
 
+    public function deleteBot(CircleBot $bot)
+    {
+        $r = unlink($this->directory."/".$bot->id.".bot");
+    }
+
 
 }

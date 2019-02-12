@@ -30,15 +30,15 @@ $hit->setLogger($logger);
 
 $bots = $bs->getAll();
 
-
-$orders = $hit->getActiveOrders();
-foreach ($orders as $order)
+/**
+ * @var $bot CircleBot
+ */
+foreach ($bots as $botID)
 {
-    if($order->eClientOrderID == '1c2688edf981732bd795828f0a7e279e')
+    $bot = $bs->getBot($botID);
+    if($bot->finished === true)
     {
-        $order->price += 0.0001;
-        $order->value += 0.001;
-        $hit->updateOrder($order);
-        var_dump($order->eClientOrderID);
+        $r = $bs->deleteBot($bot);
+        var_dump($r, $bot->id, $bot->profit);
     }
 }
