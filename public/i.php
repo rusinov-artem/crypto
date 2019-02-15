@@ -14,9 +14,9 @@ $pair = "BCHSVUSD";
 //$pair = "ETHUSD";
 //$pair = "TRXUSD";
 //$pair = "PBTTBTC";
-$pair = "LTCUSD";
+//$pair = "LTCUSD";
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 0.05, 43.7, 43.7*0.005, 43.7*0.02, 20);
+$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, -0.01, 65.6, 0.1, 1, 30);
 foreach($bots as $bot){$bs->saveBot($bot);};
 
 die();

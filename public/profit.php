@@ -30,15 +30,32 @@ $hit->setLogger($logger);
 
 $bots = $bs->getAll();
 
+$mprofitBot = new CircleBot();
+
 /**
  * @var $bot CircleBot
  */
 foreach ($bots as $botID)
 {
     $bot = $bs->getBot($botID);
-    if($bot->finished === true)
+//    if($bot->finished === true)
+//    {
+//        $r = $bs->deleteBot($bot);
+//        var_dump($r, $bot->id, $bot->profit);
+//    }
+
+    if($bot->inOrder->pairID === "PBTTBTC")
     {
-        $r = $bs->deleteBot($bot);
-        var_dump($r, $bot->id, $bot->profit);
+        var_dump($bot->id);
+        $out = clone $bot->inOrder;
+        $in = clone $bot->outOrder;
+
+        $bot->inOrder = $in;
+        $bot->outOrder = $out;
+
+        $bot->renew();
+        var_dump($bot);
+        $bs->saveBot($bot);
     }
+
 }
