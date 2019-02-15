@@ -2,7 +2,7 @@
 require __DIR__."/../vendor/autoload.php";
 ini_set('display_errors',1);
 ini_set('display_startup_errors', 1);
-$client = new \Crypto\WSFrameReader('api.hitbtc.com', 443, '/api/2/ws');
+$client = new \Crypto\WSFrameClient('api.hitbtc.com', 443, '/api/2/ws');
 $client->initSocket();
 $message = "
 {

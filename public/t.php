@@ -10,6 +10,10 @@ use Monolog\Logger;
 
 require __DIR__.'/../vendor/autoload.php';
 
+var_dump(0 == true);
+
+die();
+
 $logger = new \Monolog\Logger("test.logger");
 $logger->pushHandler(new \Monolog\Handler\StreamHandler(__DIR__.'/app.log'));
 $handler = new \Monolog\Handler\StreamHandler(__DIR__ . '/app2.log');
