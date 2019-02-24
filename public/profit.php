@@ -35,27 +35,17 @@ $mprofitBot = new CircleBot();
 /**
  * @var $bot CircleBot
  */
+$sum = 0;
+$pairs = [];
 foreach ($bots as $botID)
 {
     $bot = $bs->getBot($botID);
-//    if($bot->finished === true)
-//    {
-//        $r = $bs->deleteBot($bot);
-//        var_dump($r, $bot->id, $bot->profit);
-//    }
-
-    if($bot->inOrder->pairID === "PBTTBTC")
+    if($bot->profit > 0)
     {
-        var_dump($bot->id);
-        $out = clone $bot->inOrder;
-        $in = clone $bot->outOrder;
-
-        $bot->inOrder = $in;
-        $bot->outOrder = $out;
-
-        $bot->renew();
-        var_dump($bot);
-        $bs->saveBot($bot);
+        $pairs[$bot->inOrder->pairID] += $bot->profit;
+        $sum += $bot->profit;
     }
-
 }
+var_dump($sum);
+
+var_dump($pairs);

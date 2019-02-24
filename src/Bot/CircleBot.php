@@ -50,6 +50,13 @@ class CircleBot extends BotNext
 
     public function renewOrder(Order $order)
     {
+        /*
+        if($this->inOrder->side == 'buy')
+        {
+            $order->price = $order->price * (1 - 0.01);
+        }
+        */
+
         $order->status = null;
         $order->eClientOrderID = null;
         $order->eOrderID = null;

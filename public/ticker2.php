@@ -11,6 +11,8 @@ use Crypto\Bot\CircleBot as CircleBot;
 use Crypto\Exchange\Exceptions\OrderRejected as OrderRejected;
 use Crypto\Exchange\Order;
 use Crypto\HitBTC\Client as Client;
+use Monolog\Handler\RotatingFileHandler;
+use Monolog\Logger;
 
 require __DIR__."/../vendor/autoload.php";
 $config = include __DIR__ . "/../config.php";
@@ -20,16 +22,16 @@ $counter = 0;
 $bs = new BotStorage();
 $hit = new Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
 
-$handler = new \Monolog\Handler\RotatingFileHandler(__DIR__."/../storage/log/main.log", 3);
-$logger = new \Monolog\Logger("hitbtc.client");
+$handler = new RotatingFileHandler(__DIR__."/../storage/log/main.log", 3);
+$logger = new Logger("hitbtc.client");
 $logger->pushHandler($handler);
 
-$botLogger = new \Monolog\Logger("BotNext");
+$botLogger = new Logger("BotNext");
 $botLogger->pushHandler($handler);
 
 $hit->setLogger($logger);
 
-function tickBots(array $bots, $hit, $bs, $timeout, $limit=3)
+function tickBots(array $bots, $hit, $bs, $timeout, $logger, $limit=3)
 {
     /**
      * @var $hit Client
@@ -68,6 +70,7 @@ function tickBots(array $bots, $hit, $bs, $timeout, $limit=3)
                     continue;
                 }
                 $bot->client = $hit;
+                $bot->setLogger($logger);
                 try{
                     $bot->tick();
                 }
@@ -200,7 +203,7 @@ try{
                 return $aPrice <=> $bPrice;
             });
 
-            tickBots($sellBotsPair, $hit, $bs, $timeout, 20);
+            tickBots($sellBotsPair, $hit, $bs, $timeout, $botLogger, 20);
         }
 
         foreach ($buyBots as &$buyBotsPair)
@@ -211,7 +214,7 @@ try{
                 return $bPrice <=> $aPrice;
             });
 
-            tickBots($buyBotsPair, $hit, $bs, $timeout, 20);
+            tickBots($buyBotsPair, $hit, $bs, $timeout, $botLogger, 10);
         }
 
         $counter++;

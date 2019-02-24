@@ -9,12 +9,12 @@ $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.
 $pairs = $hit->getPairs();
 foreach ($pairs as $pair)
 {
-    if(strpos($pair->baseCurrency, "PBTT") !== false)
+    if(strpos($pair->baseCurrency, "ZEN") !== false)
     {
         var_dump($pair);
     }
 
-    if(strpos($pair->quoteCurrency, "PBTT") !== false)
+    if(strpos($pair->quoteCurrency, "ZEN") !== false)
     {
         var_dump($pair);
     }
@@ -58,6 +58,16 @@ $pairs =
         ["STXETH", "STXUSD"],
         ["XDN"."ETH", "XDN"."USD"],
 
+        ["CLO"."ETH", "CLO"."USD"],
+        ["CLO"."BTC", "CLO"."USD"],
+
+        ["BTT"."BTC", "BTT"."USD"],
+        ["BTT"."ETH", "BTT"."USD"],
+
+        //"ZENUSD"
+        ["ZEN"."BTC", "ZEN"."USD"],
+        ["ZEN"."ETH", "ZEN"."USD"],
+
     ];
 
 
@@ -98,6 +108,7 @@ $pairs =
         ["SPC"."BTC", "SPCUSD"],
         ["CAT"."BTC", "CAT"."USD"],
         ["MTX"."BTC", "MTX"."USD"],
+        ["ZEN"."BTC", "ZEN"."USD"],
 
     ];
 
