@@ -15,7 +15,7 @@ class Order
     public $pairID; //Идентификатор пары
     public $side; //"buy" or "sell"
     public $traded = 0; //Количество проданых\купленных монет
-    public $status; // new, suspended, partiallyFilled, filled, canceled, expired
+    public $status; // new, suspended, partiallyFilled, filled, canceled, expired, unknown
     public $type = "limit"; //limit, market (limit, market, stopLimit, stopMarket)
     public $timeInForce = 'GTC'; //GTC, IOC, FOK, Day, GTD
 

@@ -32,13 +32,69 @@ Class Client implements ClientInterface
 
     public $apiKey;
     public $secretKey;
-    public $activeOrders = null;
+
+
+    //Cache
     public $trades = [];
+    public $pairs = [];
+    public $activeOrders = null;
+    public $historicalOrders = null;
+    public $orderBook = [];
 
     /**
      * @var \GuzzleHttp\Client
      */
     private $client;
+
+    public function loadTrades($pair, $mCount = 999)
+    {
+
+
+        if(array_key_exists( $pair, $this->trades )) return;
+
+        $client = $this;
+        $i = 0;
+        $this->chunkAccountTrades($pair, function($trade, $index, $count) use (&$client, &$i, &$mCount, $pair)
+        {
+            /**
+             * @var $item Trade
+             */
+
+            $i++;
+
+            if($i >= $mCount) {
+                return false;
+            }
+
+            $client->trades[$pair][] = $trade;
+
+
+            if($count < 1000 && $index == $count)
+            {
+                return false;
+            }
+
+            return true;
+
+        }, "DESC", 1000);
+
+        if(!array_key_exists($pair, $this->trades))
+        {
+            $this->trades[$pair] = [];
+        }
+    }
+    public function clearPreloadedTrades($pair=null)
+    {
+        if($pair === null)
+        {
+            $this->trades = [];
+            return;
+        }
+
+        if(array_key_exists($pair, $this->trades))
+            unset($this->trades[$pair]);
+
+    }
 
     public function __construct($apiKey, $secretKey)
     {
@@ -53,6 +109,11 @@ Class Client implements ClientInterface
      */
     public function getPairs()
     {
+        if(!empty($this->pairs))
+        {
+            return $this->pairs;
+        }
+
         $response = $this->request("GET", 'public/symbol', []);
 
         if($response->getStatusCode() == 200)
@@ -79,6 +140,7 @@ Class Client implements ClientInterface
                 $result[$pair->id] = $pair;
             }
 
+            $this->pairs = $result;
             return $result;
         }
 
@@ -406,9 +468,9 @@ Class Client implements ClientInterface
      * @return bool
      * @throws \Exception
      */
-    public function checkOrderIsActive(Order &$order)
+    public function checkOrderIsActive(Order &$order, $forse = false)
     {
-        $orders = $this->getActiveOrders();
+        $orders = $this->getActiveOrders($forse);
 
         if($result = (array_key_exists($order->eClientOrderID, $orders)))
         {
@@ -419,13 +481,20 @@ Class Client implements ClientInterface
 
     }
 
-    public function getOrderStatus(Order &$order)
+    public function getOrderStatus(Order &$order, $forse = false)
     {
-        if($isActive = $this->checkOrderIsActive($order))
+        if($isActive = $this->checkOrderIsActive($order, $forse))
         {
             return $order->status;
         }
 
+        if($this->isOrderCanceled($order))
+        {
+            $order->status = 'canceled';
+            return $order->status;
+        }
+
+        $this->loadTrades($order->pairID);
         //Ордер либо полностью исполнен либо canceled;
 
         $this->getOrderTrades($order);
@@ -436,7 +505,7 @@ Class Client implements ClientInterface
         }
         else
         {
-            $order->status = 'canceled';
+            $order->status = 'unknown';
         }
 
         return $order->status;
@@ -488,13 +557,16 @@ Class Client implements ClientInterface
             if($response->getStatusCode() == 200)
             {
                 $data = json_decode( (string)$response->getBody(), true);
-                if(count($data) < 1) break;
+                $dataCount = count($data);
+                if($dataCount < 1) {
+                    break;
+                }
 
                 foreach ($data as $item)
                 {
                     $counter++;
                     $item = $itemConverter($item);
-                    $r = $func($item);
+                    $r = $func($item, $counter, $dataCount);
                     if($r === false) return $counter;
                 }
 
@@ -512,6 +584,18 @@ Class Client implements ClientInterface
 
     public function chunkAccountTrades($pairID, callable $func, $sort="DESC", $chunkSize=100)
     {
+
+        if(array_key_exists($pairID ,$this->trades) && is_array($this->trades[$pairID]))
+        {
+            foreach ($this->trades[$pairID] as $trade)
+            {
+                $r = $func($trade);
+                if($r===false) return ;
+            }
+
+            return ;
+        }
+
         $p =
             [
               'sort'=>$sort,
@@ -553,10 +637,14 @@ Class Client implements ClientInterface
      * @throws UnknownError
      * @throws ValidationError
      */
-    public function getOrderBook($pairID, $limit = 100)
+    public function getOrderBook($pairID, $limit = 100, $forse = false)
     {
-        $response = $this->request('GET', "public/orderbook/$pairID", ['limit'=>$limit]);
+        if(array_key_exists($pairID, $this->orderBook) && !$forse)
+        {
+            return $this->orderBook[$pairID];
+        }
 
+        $response = $this->request('GET', "public/orderbook/$pairID", ['limit'=>$limit]);
 
         if(200 == $response->getStatusCode())
         {
@@ -581,7 +669,7 @@ Class Client implements ClientInterface
                 $orderBook->bid[] = $i;
             }
 
-            return $orderBook;
+            return $this->orderBook[$pairID] = $orderBook;
         }
         else
         {
@@ -590,7 +678,6 @@ Class Client implements ClientInterface
             {
                 $eMessage = "{$error['error']['message']} ({$error['error']['description']})";
 
-
                 if($error['error']['code'] == 2001)
                 {
                     throw new PairNotFound("Pair $pairID not found" );
@@ -598,11 +685,7 @@ Class Client implements ClientInterface
             }
         }
 
-
-
-
         throw $this->handleErrorResponse($response);
-
 
     }
 
@@ -627,6 +710,8 @@ Class Client implements ClientInterface
 
     public function request($method, $action, array $params)
     {
+
+        var_dump($action);
 
         $dataToSend = [];
 
@@ -721,8 +806,14 @@ Class Client implements ClientInterface
      * @return Order[]
      * @throws \Exception
      */
-    public function getOrdersHistory()
+    public function getOrdersHistory($forse = false)
     {
+
+        if(!$forse && is_array($this->historicalOrders))
+        {
+            return $this->historicalOrders;
+        }
+
         $response = $this->request("GET", "history/order", []);
 
         $result = [];
@@ -748,7 +839,7 @@ Class Client implements ClientInterface
 
             }
 
-            return $result;
+            return $this->historicalOrders = $result;
         }
 
 
@@ -757,9 +848,9 @@ Class Client implements ClientInterface
 
     }
 
-    public function isOrderCanceled( Order $order )
+    public function isOrderCanceled( Order $order, $force = false )
     {
-        $orders = $this->getOrdersHistory();
+        $orders = $this->getOrdersHistory($force);
 
         if(!array_key_exists($order->eOrderID, $orders))
         {
@@ -769,6 +860,14 @@ Class Client implements ClientInterface
         $order = $orders[$order->eOrderID];
 
         return ($order->status === 'canceled');
+    }
+
+    public function clearCache()
+    {
+        $this->trades = [];
+        $this->historicalOrders = null;
+        $this->activeOrders = null;
+        $this->orderBook = [];
     }
 
 }

@@ -387,7 +387,7 @@ class Client implements ClientInterface
     {
 
         $dataToSend = [];
-        $params['timestamp'] = number_format(microtime(true) * 1000, 0, '.', '');
+        $params['timestamp'] = number_format(microtime(true) * 1000 - 1000, 0, '.', '');
         $query = http_build_query($params, '', '&');
         $signature = hash_hmac('sha256', $query, $this->secretKey);
         $params['signature'] = $signature;

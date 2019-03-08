@@ -45,6 +45,13 @@ foreach ($bots as $botID)
         $pairs[$bot->inOrder->pairID] += $bot->profit;
         $sum += $bot->profit;
     }
+
+    if($bot->finished && $bot->currentCircle < $bot->circles)
+    {
+        $bot->finished = false;
+        var_dump("{$bot->id} RESTARTED");
+        $bs->saveBot($bot);
+    }
 }
 var_dump($sum);
 

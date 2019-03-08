@@ -8,6 +8,7 @@
 
 use Crypto\Bot\BotStorage as BotStorage;
 use Crypto\Bot\CircleBot as CircleBot;
+use Crypto\Bot\Exceptions\InOrderBadPrice;
 use Crypto\Exchange\Exceptions\OrderRejected as OrderRejected;
 use Crypto\Exchange\Order;
 use Crypto\HitBTC\Client as Client;
@@ -41,7 +42,6 @@ function tickBots(array $bots, $hit, $bs, $timeout, $logger, $limit=3)
      */
 
     $placedOrders = $hit->getActiveOrders();
-    $ob = $hit->getOrderBook(current($bots)->inOrder->pairID);
 
     $si = 0;
     foreach ($bots as $bot)
@@ -51,17 +51,6 @@ function tickBots(array $bots, $hit, $bs, $timeout, $logger, $limit=3)
         {
             try {
                 $activeOrder = current($bot->getActiveOrders());
-
-                if($activeOrder->side === 'buy' && $activeOrder->price > $ob->getBestAsk()->price)
-                {
-                    continue;
-                }
-
-                if($activeOrder->side === 'sell' && $activeOrder->price < $ob->getBestBid()->price)
-                {
-                    continue;
-                }
-
 
                 if($hit->isOrderCanceled($activeOrder))
                 {
@@ -80,8 +69,13 @@ function tickBots(array $bots, $hit, $bs, $timeout, $logger, $limit=3)
                    $bs->saveBot($bot);
                    continue;
                 }
+                catch (InOrderBadPrice $e)
+                {
+                    //var_dump($e->getMessage());
+                    continue;
+                }
 
-                usleep($timeout);
+
                 $si++;
 
                 if($activeOrder->eClientOrderID === null && $activeOrder->eOrderID === null)
@@ -101,8 +95,6 @@ function tickBots(array $bots, $hit, $bs, $timeout, $logger, $limit=3)
             try{
 
                 $activeOrders = ($bot->getActiveOrders());
-
-
 
                 if(count($activeOrders)<1) {
                     continue;
@@ -134,7 +126,7 @@ m1:
 try{
     while(1)
     {
-
+        $start = microtime(true);
         $hit->activeOrders = null;
 
         $bots = $bs->getAll();
@@ -154,7 +146,17 @@ try{
             $bot = $bs->getBot($botID);
 
 
-            $botsList[] = $bot;
+            if($bot)
+            {
+                $botsList[] = $bot;
+            }
+            else
+            {
+                var_dump($botID." Broken");
+                $logger->error("$botID is broken");
+                $bs->deleteBot($botID);
+            }
+
         }
 
         $sellBots=[];
@@ -163,6 +165,7 @@ try{
         /**
          * @var $bot CircleBot
          */
+        $botPairs = [];
         foreach ($botsList as $bot)
         {
             if($bot->isFinished()) continue;
@@ -173,6 +176,7 @@ try{
             $activeOrders = $bot->getActiveOrders();
             if(count($activeOrders)===1)
             {
+                $botPairs[$bot->inOrder->pairID] = 1;
                 if(current($activeOrders)->side === 'sell')
                 {
                     if(!isset($sellBots[$bot->inOrder->pairID]))
@@ -203,6 +207,7 @@ try{
                 return $aPrice <=> $bPrice;
             });
 
+
             tickBots($sellBotsPair, $hit, $bs, $timeout, $botLogger, 20);
         }
 
@@ -214,11 +219,15 @@ try{
                 return $bPrice <=> $aPrice;
             });
 
-            tickBots($buyBotsPair, $hit, $bs, $timeout, $botLogger, 10);
+            tickBots($buyBotsPair, $hit, $bs, $timeout, $botLogger, 5);
+
         }
 
         $counter++;
-        var_dump($counter);
+        $rslt = microtime(true) - $start;
+        var_dump($counter." $rslt");
+
+        $hit->clearCache();
     }
 }
 catch (\Throwable $t)

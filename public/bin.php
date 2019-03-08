@@ -21,6 +21,5 @@ var_dump($data);
 
 $orders = $bin->getActiveOrders();
 
-$o = $bin->closeOrder($o);
 
 

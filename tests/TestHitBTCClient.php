@@ -109,17 +109,17 @@ class TestHitBTCClient extends TestCase
     public function testCheckOrderIsActive()
     {
         $order = $this->client->createOrder($this->miniOrder);
-        $this->assertTrue($this->client->checkOrderIsActive($order));
+        $this->assertTrue($this->client->checkOrderIsActive($order, true));
         $this->client->closeOrder($order);
-        $this->assertTrue(!$this->client->checkOrderIsActive($order));
+        $this->assertTrue(!$this->client->checkOrderIsActive($order, true));
     }
 
     public function testOrderGetStatus()
     {
         $order = $this->client->createOrder($this->miniOrder);
-        $this->assertEquals('new',$this->client->getOrderStatus($order));
+        $this->assertEquals('new',$this->client->getOrderStatus($order, true));
         $this->client->closeOrder($order);
-        $this->assertEquals('canceled',$this->client->getOrderStatus($order));
+        $this->assertEquals('canceled',$this->client->getOrderStatus($order, true));
     }
 
     public function testGetAccountTrades()
@@ -154,6 +154,56 @@ class TestHitBTCClient extends TestCase
             return false;
         });
         $this->assertTrue($count>=0);
+    }
+
+    public function test_preloaded_trades()
+    {
+        $orders = $this->client->getActiveOrders();
+
+        $tClient = new class($this->client) extends Client{
+
+            private $client;
+            public $counter = 0;
+
+            public function __construct(Client $client)
+            {
+                $this->client = $client;
+            }
+
+            public function request($method, $action, array $params)
+            {
+                if($action === 'history/trades')
+                {
+                    $this->counter++;
+                }
+
+                return $this->client->request($method, $action, $params);
+            }
+
+            public function __call($name, $arguments)
+            {
+               return call_user_func_array([$this->client, $name], $arguments);
+            }
+
+            public function __get($name)
+            {
+               return $this->client->$name;
+            }
+        };
+
+
+        $pairs = [];
+        foreach ($orders as $order)
+        {
+            $pairs[$order->pairID] = 1;
+            $tClient->loadTrades($order->pairID);
+            $tClient->getOrderTrades($order);
+        }
+
+        var_dump(count($pairs));
+        var_dump($tClient->counter);
+
+        $this->assertEquals(count($pairs), $tClient->counter);
     }
 
 

@@ -7,6 +7,7 @@ use Crypto\Bot\Events\InOrderCreated;
 use Crypto\Bot\Events\InOrderExecuted;
 use Crypto\Bot\Events\OutOrderCreated;
 use Crypto\Bot\Events\OutOrderExecuted;
+use Crypto\Bot\Exceptions\InOrderBadPrice;
 use Crypto\Exchange\Order;
 use Crypto\HitBTC\Client;
 use Crypto\Traits\Loggable;
@@ -86,7 +87,7 @@ class BotNext
 
         $routes[] = function ()
         {
-            if(($this->inOrder->isActive() || $this->inOrder->status === 'canceled' )&& $this->outOrder->status == null)
+            if(($this->inOrder->isActive() || $this->inOrder->status === 'unknown' )&& $this->outOrder->status == null)
             {
                 return [ 'action' => [$this, 'checkInOrder'], 'params' => [] ];
             }
@@ -97,7 +98,7 @@ class BotNext
 
         $routes[] = function ()
         {
-            if($this->inOrder->status === 'filled' || ( $this->outOrder->isActive() || $this->outOrder->status === 'canceled') )
+            if($this->inOrder->status === 'filled' || ( $this->outOrder->isActive() || $this->outOrder->status === 'unknown') )
             {
                 return [ 'action' => [$this, 'checkOutOrder'], 'params' => [] ];
             }
@@ -141,7 +142,7 @@ class BotNext
             if($ob->getBestAsk()->price <= $this->inOrder->price )
             {
                 $this->log("WARNING! Order will not be placed cose actual price lower then buy order price");
-                throw new \Exception('actual price lower then buy order price');
+                throw new InOrderBadPrice('actual price lower then buy order price '.$this->inOrder->pairID);
                 //return false;
             }
         }
@@ -150,7 +151,7 @@ class BotNext
             if($ob->getBestBid()->price >= $this->inOrder->price )
             {
                 $this->log("WARNING! Order will not be placed cose actual price higher then sell order price");
-                throw new \Exception("actual price higher then sell order price");
+                throw new InOrderBadPrice("actual price higher then sell order price".$this->inOrder->pairID);
                 //return false;
             }
         }
@@ -176,6 +177,11 @@ class BotNext
             $this->client->createOrder($this->outOrder);
             $this->fire('BotNext.OutOrderCreated', new OutOrderCreated($this));
         }
+
+        if('canceled' === $status)
+        {
+            $this->finished = true;
+        }
     }
 
     public function checkOutOrder()
@@ -187,6 +193,11 @@ class BotNext
         {
             $this->fire('BotNext.OutOrderExecuted', new OutOrderExecuted($this));
             //bot finished;
+        }
+
+        if('canceled' === $status)
+        {
+            $this->finished = true;
         }
 
     }
