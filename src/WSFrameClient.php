@@ -15,7 +15,7 @@ class WSFrameClient
     private $path;
     public $userAgent = "HITBOT";
     public $headers;
-    public $casertPath = "C:\web\php\cacert.pem";
+    public $casertPath = __DIR__."/cacert.pem";
 
     private $currentStr = '';
 
@@ -106,6 +106,32 @@ class WSFrameClient
         }
     }
 
+    public function ping()
+    {
+        $frameHead = array();
+        $frame = '';
+        $payload = "";
+        $payloadLength = strlen("");
+        $frameHead[0] = 137;
+
+
+            $frameHead[1] = $payloadLength;
+
+        // convert frame-head to string:
+        foreach (array_keys($frameHead) as $i) {
+            $frameHead[$i] = chr($frameHead[$i]);
+        }
+
+        $frame = implode('', $frameHead);
+        // append payload to frame:
+        $framePayload = array();
+        for ($i = 0; $i < $payloadLength; $i++) {
+            $frame .= $payload[$i];
+        }
+
+        return fwrite($this->socket, $frame, strlen($frame));
+    }
+
     public function getFrame()
     {
         if(strlen($this->currentStr) < 1)
@@ -115,6 +141,13 @@ class WSFrameClient
 
         if(strlen($this->currentStr)<1)
         {
+            $status = $this->ping();
+
+            var_dump("ping status = ".$status);
+
+            if($status < 1)
+                throw new \Exception("Socket connection lost");
+
             return false;
         }
 

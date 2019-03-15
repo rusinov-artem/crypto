@@ -10,8 +10,15 @@ $bin = new \Crypto\Binance\Client();
 $bin->apiKey = $config['binance.api.key'];
 $bin->secretKey = $config['binance.api.secret'];
 
-$data = $bin->getBalance();
-var_dump($data);
+$data = $bin->getPairs();
+foreach ($data as $pair) {
+    if($pair->baseCurrency == "DASH")
+    {
+        var_dump($pair);
+    }
+}
+
+die();
 
 //var_dump($bin->getNonZeroBalance());
 //var_dump($bin->getMinimalValue($order->pairID, 4000));

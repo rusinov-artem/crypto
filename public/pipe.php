@@ -9,12 +9,8 @@ $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.
 $pairs = $hit->getPairs();
 foreach ($pairs as $pair)
 {
-    if(strpos($pair->baseCurrency, "ZEN") !== false)
-    {
-        var_dump($pair);
-    }
-
-    if(strpos($pair->quoteCurrency, "ZEN") !== false)
+    if((strpos($pair->baseCurrency, "GRMD") !== false) &&
+    (strpos($pair->quoteCurrency, "BTC") !== false))
     {
         var_dump($pair);
     }

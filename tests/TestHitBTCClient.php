@@ -119,7 +119,7 @@ class TestHitBTCClient extends TestCase
         $order = $this->client->createOrder($this->miniOrder);
         $this->assertEquals('new',$this->client->getOrderStatus($order, true));
         $this->client->closeOrder($order);
-        $this->assertEquals('canceled',$this->client->getOrderStatus($order, true));
+        $this->assertTrue(in_array($this->client->getOrderStatus($order, true), ['canceled', 'unknown']));
     }
 
     public function testGetAccountTrades()

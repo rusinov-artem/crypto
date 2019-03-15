@@ -5,19 +5,25 @@
  * Date: 11/10/2018
  * Time: 4:43 PM
  */
+
+use Crypto\Bot\BotStorage;
+use Crypto\HitBTC\Client;
+use Monolog\Handler\RotatingFileHandler;
+use Monolog\Logger;
+
 require __DIR__."/../vendor/autoload.php";
 $config = include __DIR__ . "/../config.php";
 
 
 $counter = 0;
-$bs = new \Crypto\Bot\BotStorage();
-$hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
+$bs = new BotStorage();
+$hit = new Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
 
-$handler = new \Monolog\Handler\RotatingFileHandler(__DIR__."/../storage/log/main.log", 3);
-$logger = new \Monolog\Logger("hitbtc.client");
+$handler = new RotatingFileHandler(__DIR__."/../storage/log/main.log", 3);
+$logger = new Logger("hitbtc.client");
 $logger->pushHandler($handler);
 
-$botLogger = new \Monolog\Logger("BotNext");
+$botLogger = new Logger("BotNext");
 $botLogger->pushHandler($handler);
 
 $hit->setLogger($logger);

@@ -806,7 +806,7 @@ Class Client implements ClientInterface
      * @return Order[]
      * @throws \Exception
      */
-    public function getOrdersHistory($forse = false)
+    public function getOrdersHistory($forse = false, $params = [])
     {
 
         if(!$forse && is_array($this->historicalOrders))
@@ -814,7 +814,7 @@ Class Client implements ClientInterface
             return $this->historicalOrders;
         }
 
-        $response = $this->request("GET", "history/order", []);
+        $response = $this->request("GET", "history/order", $params);
 
         $result = [];
         if($response->getStatusCode() == 200)
