@@ -59,6 +59,7 @@ function tickBots(array $bots, $hit, $bs, $timeout, $logger, $limit=3)
                 $bot->setLogger($logger);
                 try{
                     $bot->tick();
+                    $si++;
                 }
                 catch (OrderRejected $e)
                 {
@@ -72,9 +73,6 @@ function tickBots(array $bots, $hit, $bs, $timeout, $logger, $limit=3)
                     continue;
                 }
 
-
-                $si++;
-
                 if($activeOrder->eClientOrderID === null && $activeOrder->eOrderID === null)
                 {
                     $activeOrder->status = null;
@@ -84,6 +82,10 @@ function tickBots(array $bots, $hit, $bs, $timeout, $logger, $limit=3)
 
 
             } catch (\Throwable $t) {
+                /**
+                 * @var $logger Logger
+                 */
+                $logger->warning("UNEXPECTED EXCEPTION ".$t->getMessage()." ".$t->getFile().":".$t->getLine());
                 var_dump($t->getMessage());
             }
         }
@@ -216,12 +218,10 @@ function main(Client $hit, BotStorage $bs, Logger $logger, Logger $botLogger)
                 return $bPrice <=> $aPrice;
             });
 
-            tickBots($buyBotsPair, $hit, $bs, $timeout, $botLogger, 5);
+            tickBots($buyBotsPair, $hit, $bs, $timeout, $botLogger, 1);
 
         }
 
-
-        $hit->clearCache();
         $dt = (new \DateTime())->format("Y-m-d H:i:s");
         file_put_contents(__DIR__.'/socket.log', "$dt main executed \n\n", FILE_APPEND);
 
@@ -292,6 +292,8 @@ while(1)
         $dt = (new \DateTime())->format("Y-m-d H:i:s");
         file_put_contents(__DIR__.'/socket.log', "$dt CheckSignal \n\n", FILE_APPEND);
         main($hit, $bs, $logger, $botLogger);
+        main($hit, $bs, $logger, $botLogger);
+        $hit->clearCache();
     }
 
 

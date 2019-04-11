@@ -337,6 +337,7 @@ Class Client implements ClientInterface
             return $order;
         }
 
+        $this->log("Unable to create order. ".(string)$response->getBody(),[], Logger::WARNING);
         $ex = $this->handleErrorResponse($response);
 
         throw $ex;
@@ -631,9 +632,16 @@ Class Client implements ClientInterface
     /**
      * @param $pairID
      * @param int $limit
+     * @param bool $forse
      * @return OrderBook
+     * @throws ActionIsForbidden
+     * @throws AuthorisationFail
+     * @throws CurrencyNotFound
+     * @throws ExchangeError
      * @throws OrderNotFound
      * @throws OrderRejected
+     * @throws PairNotFound
+     * @throws TooManyRequests
      * @throws UnknownError
      * @throws ValidationError
      */
@@ -710,9 +718,6 @@ Class Client implements ClientInterface
 
     public function request($method, $action, array $params)
     {
-
-        var_dump($action);
-
         $dataToSend = [];
 
         $dataToSend['auth'] = [
