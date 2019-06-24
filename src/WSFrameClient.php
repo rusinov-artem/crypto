@@ -78,7 +78,11 @@ class WSFrameClient
 
     public function read()
     {
-        $r =  fread($this->socket, 8192);
+        $s = [$this->socket];
+        $k= [];
+       // $st = stream_context_get_options($this->socket);
+        //$r = stream_select($s,$k,$k, 3);
+        $r =  fread($this->socket, 10000);
         return $r;
     }
 
@@ -106,52 +110,41 @@ class WSFrameClient
         }
     }
 
+    public function pong()
+    {
+        $frame = chr(bindec("10001010")) . chr(bindec("10000000")) ;
+        return $r = fwrite($this->socket, $frame, strlen($frame));
+    }
+
     public function ping()
     {
-        $frameHead = array();
-        $frame = '';
-        $payload = "";
-        $payloadLength = strlen("");
-        $frameHead[0] = 137;
+        $frame = chr(bindec("10001001")) . chr(bindec("10000000")) ;
+        return $r = fwrite($this->socket, $frame, strlen($frame));
 
-
-            $frameHead[1] = $payloadLength;
-
-        // convert frame-head to string:
-        foreach (array_keys($frameHead) as $i) {
-            $frameHead[$i] = chr($frameHead[$i]);
-        }
-
-        $frame = implode('', $frameHead);
-        // append payload to frame:
-        $framePayload = array();
-        for ($i = 0; $i < $payloadLength; $i++) {
-            $frame .= $payload[$i];
-        }
-
-        return fwrite($this->socket, $frame, strlen($frame));
     }
 
     public function getFrame()
     {
-        if(strlen($this->currentStr) < 1)
+        if(empty($this->currentStr))
         {
             $this->currentStr = $this->read();
         }
 
-        if(strlen($this->currentStr)<1)
+        if(empty($this->currentStr))
         {
-            $status = $this->ping();
-
-            var_dump("ping status = ".$status);
-
-            if($status < 1)
-                throw new \Exception("Socket connection lost");
+//            $status = $this->ping();
+//
+//            var_dump("ping status = ".$status);
+//
+//            if($status < 1)
+//            {
+//                throw new \Exception("Socket connection lost");
+//            }
 
             return false;
         }
 
-        if($this->currentStr)
+        if(!empty($this->currentStr))
             return $this->buildFrame($this->currentStr);
 
         return false;
@@ -164,6 +157,13 @@ class WSFrameClient
         $frame = new WSFrame();
         $frame->initHeaderInfo($str);
 
+        if($frame->opcode === 0x9)
+        {
+            $r = $this->pong();
+            var_dump("Pong sent $r");
+        }
+
+        var_dump("OPCODE IS {$frame->opcode}");
         m1:
         if(strlen($str) > $frame->offset + $frame->dataLength)
         {

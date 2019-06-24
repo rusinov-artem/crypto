@@ -30,9 +30,11 @@ $pair = "EDOUSD";
 //$pair = "ONTUSD";
 //$pair = "XEMUSD";
 //$pair = "ZRXUSD";
+//$pair = "VOCOUSD";
+//$pair = "ADAUSD";
 
-$bPrice = 0.789875;
-$bots = BotFactory::spreadAttack($pair,  1 / $bPrice, $bPrice, $bPrice * 0.001, $bPrice * 0.05, 100);
+$bPrice = 0.96;
+$bots = BotFactory::spreadAttack($pair,  10 / $bPrice, $bPrice, $bPrice * 0.002, 1.02, 1);
 foreach($bots as $bot){$bs->saveBot($bot);};
 
 var_dump($pair, $bPrice);

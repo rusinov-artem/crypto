@@ -150,6 +150,8 @@ class Client implements ClientInterface
             return $result;
 
         }
+
+        var_dump($a = (string)$response->getBody());
     }
 
     public function getNonZeroBalance()
@@ -185,6 +187,11 @@ class Client implements ClientInterface
               'quantity' => $order->value,
               'price' => $order->price,
             ];
+
+        if($params['type'] == 'MARKET')
+        {
+            unset($params['timeInForce']);
+        }
 
         if($order->id)
         {
@@ -349,6 +356,45 @@ class Client implements ClientInterface
 
     }
 
+
+    public function getAllOrders($pair, $orderId=null, int $startTime=null, int $endTime=null, $limit=1000)
+    {
+        //GET /api/v3/allOrders
+
+        $response = $this->request("v3", "GET", "allOrders",[
+            'symbol'=>$pair,
+            'orderId'=>$orderId,
+            'startTime'=>$startTime,
+            'endTime'=>$endTime,
+            'limit'=>$limit
+        ]);
+
+        $data = json_decode((string)$response->getBody(), true);
+
+        if($response->getStatusCode()==200)
+        {
+            $result = [];
+
+            foreach ($data as $orderData)
+            {
+                $order = new Order();
+                $order->pairID = $orderData['symbol'];
+                $order->id = $orderData['clientOrderId'];
+                $order->price = (float)$orderData['price'];
+                $order->value = (float)$orderData['origQty'];
+                $order->traded = (float)$orderData['executedQty'];
+                $order->status = $this->convertOrderStatus($orderData['status']);
+                $order->type = strtolower($orderData['type']);
+                $order->side = strtolower($orderData['side']);
+                $order->date = (new \DateTime())->setTimestamp($orderData['time'] / pow(10, 3));
+
+                $result[$order->id] = $order;
+            }
+
+            return $result;
+        }
+    }
+
     /**
      * @param Order $order
      * @return bool
@@ -383,14 +429,60 @@ class Client implements ClientInterface
         // TODO: Implement getPairTrades() method.
     }
 
+    public function getListenKey()
+    {
+        $response = $this->request("v1", "POST", "userDataStream",[]);
+
+        $data = json_decode((string)$response->getBody(), true);
+
+        if($response->getStatusCode()==200)
+        {
+
+            var_dump($data);
+            return $data['listenKey'];
+        }
+
+    }
+
+    public function removeListenKey($key)
+    {
+        $response = $this->request("v1", "DELETE", "userDataStream",['listenKey'=>$key]);
+
+        $data = json_decode((string)$response->getBody(), true);
+
+        if($response->getStatusCode()==200)
+        {
+
+            var_dump($data);
+        }
+
+    }
+
+    public function pingListenKey($key)
+    {
+        $response = $this->request("v1", "PUT", "userDataStream",['listenKey'=>$key]);
+        $data = json_decode((string)$response->getBody(), true);
+        return $data;
+
+    }
+
+
     public function request( $version, $method,  $action, array $params)
     {
 
         $dataToSend = [];
-        $params['timestamp'] = number_format(microtime(true) * 1000 - 1000, 0, '.', '');
-        $query = http_build_query($params, '', '&');
+        $bparams = [];
+
+        foreach ($params as $k=>$v)
+        {
+            $bparams[$k]=$v;
+        }
+
+        $bparams['timestamp'] = number_format(microtime(true) * 1000 - 4000 , 0, '.', '');
+
+        $query = http_build_query($bparams, '', '&');
         $signature = hash_hmac('sha256', $query, $this->secretKey);
-        $params['signature'] = $signature;
+        $bparams['signature'] = $signature;
 
         $dataToSend['headers'] =
             [
@@ -399,11 +491,17 @@ class Client implements ClientInterface
 
         if(strtolower($method) !== "get")
         {
-            $dataToSend['form_params'] = $params;
+            if(!empty($params))
+              $dataToSend['form_params'] = $bparams;
+
+            if($version === 'v1')
+            {
+                $dataToSend['form_params'] = $params;
+            }
         }
         else
         {
-            $dataToSend['query'] = $params;
+            $dataToSend['query'] = $bparams;
         }
 
 

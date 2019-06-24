@@ -218,7 +218,7 @@ function main(Client $hit, BotStorage $bs, Logger $logger, Logger $botLogger)
                 return $bPrice <=> $aPrice;
             });
 
-            tickBots($buyBotsPair, $hit, $bs, $timeout, $botLogger, 1);
+            tickBots($buyBotsPair, $hit, $bs, $timeout, $botLogger, 5);
 
         }
 
@@ -258,10 +258,18 @@ $client->send($message);
 $message = json_encode([ 'method'=>'subscribeReports', 'params'=>[], 'id'=>123, ]);
 $client->send($message);
 stream_set_timeout($client->socket, 10);
-//stream_set_blocking($client->socket, false);
-
+stream_set_blocking($client->socket, false);
+main($hit, $bs, $logger, $botLogger);
 
 $r = socket_get_status($socket);
+
+//$sSocket = ['lol'=>$socket];
+//$null = [];
+//$r = stream_select($sSocket, $null, $null, 10);
+//var_dump("Socket select {$r}");
+//var_dump($sSocket);
+//die();
+
 while(1)
 {
     try{
@@ -292,6 +300,7 @@ while(1)
         $dt = (new \DateTime())->format("Y-m-d H:i:s");
         file_put_contents(__DIR__.'/socket.log', "$dt CheckSignal \n\n", FILE_APPEND);
         main($hit, $bs, $logger, $botLogger);
+        $hit->getActiveOrders(true);
         main($hit, $bs, $logger, $botLogger);
         $hit->clearCache();
     }

@@ -38,9 +38,38 @@ class WSFrame
     public function initHeaderInfo($str)
     {
 
+        var_dump("init header: $str");
         $firstByteBinary = sprintf('%08b', ord($str[0]));
         $secondByteBinary = sprintf('%08b', ord($str[1]));
         $this->opcode = bindec(substr($firstByteBinary, 4, 4));
+        if($this->opcode === 0x9)
+        {
+            var_dump("REsived PING!!!!");
+        }
+
+        if($this->opcode === 0xA)
+        {
+            var_dump("REsived PONG!!!!");
+        }
+
+
+        if($this->opcode === 0x8)
+        {
+            var_dump("Other side closing connection!");
+            throw new \Exception("Connection closed");
+        }
+
+        if($this->opcode == 0x1)
+        {
+            var_dump("GOT TEXT FRAME");
+            var_dump($str); die();
+        }
+
+        if($this->opcode == 0x2)
+        {
+            var_dump("GOT TEXT FRAME");
+        }
+
         $this->mask = ($secondByteBinary[0] == '1') ? true : false;
         $payloadLength = ord($str[1]) & 127;
 
