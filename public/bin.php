@@ -7,25 +7,6 @@ $config = include __DIR__ . "/../config.php";
 $bin->apiKey = $config['binance.api.key'];
 $bin->secretKey = $config['binance.api.secret'];
 
-$order = new \Crypto\Exchange\Order();
-$order->pairID = "PAXUSDT";
-$order->type = "market";
-$order->side = "buy";
-$order->value = 11;
-//$order->price = "0.8";
-//$order->id = "lol3";
-
-//$d = $bin->createOrder($order);
-//$d = $bin->closeOrder($order);
-//var_dump($d); die();
-
-//$orders = $bin->getAllOrders("BTCUSDT");
-//var_dump($orders);
-//die();
-//var_dump($order); die();
-//$p = $bin->getListenKey();
-//$d = $bin->pingListenKey("ixSEAUxMRl2cuUxSHf3Oo2MzLWLfaYrZTBLMF6X0AEk5I5MWYsz7mxaSrdn4");
-//var_dump($d);die();
 
 m1:
 if(!($p??false))
@@ -60,6 +41,7 @@ while(1) {
         $i++;
 
         try{
+            usleep(500000);
             $frame = $client->getFrame();
         }
         catch (\Exception $e)
@@ -68,12 +50,15 @@ while(1) {
         }
 
         if($frame)
-        var_dump($msg = $frame->getData());
-        if(!empty($msg) && $frame->opcode !==9)
         {
-            $dt = (new \DateTime())->format("Y-m-d H:i:s");
-            file_put_contents("binance.log", "$dt\n$msg\n\n", FILE_APPEND);
+            var_dump($msg = $frame->getData());
+            if(!empty($msg) && $frame->opcode !==9)
+            {
+                $dt = (new \DateTime())->format("Y-m-d H:i:s");
+                file_put_contents("binance.log", "$dt\n$msg\n\n", FILE_APPEND);
+            }
         }
+
 
 
         if($i % 30 == 0)
