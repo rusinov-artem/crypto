@@ -174,7 +174,14 @@ class BotNext
         if('filled' === $status)
         {
             $this->fire('BotNext.InOrderExecuted', new InOrderExecuted($this));
+
+            if("EDOUSD"===$this->outOrder->pairID && 0.96 < $this->outOrder->price && $this->outOrder->side == 'buy')
+            {
+                $this->outOrder->price = rand(65, 96) * 0.01;
+            }
+
             $this->client->createOrder($this->outOrder);
+
             $this->fire('BotNext.OutOrderCreated', new OutOrderCreated($this));
         }
 

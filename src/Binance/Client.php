@@ -18,6 +18,7 @@ use GuzzleHttp\Exception\ServerException;
 use Monolog\Logger;
 use mysql_xdevapi\Exception;
 use Psr\SimpleCache\CacheInterface;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Simple\FilesystemCache;
 
 class Client implements ClientInterface
@@ -41,7 +42,7 @@ class Client implements ClientInterface
     public function __construct()
     {
         $this->client = new \GuzzleHttp\Client();
-        $this->cache = new FilesystemCache("binance", 0, __DIR__."/../../storage/cache");
+        $this->cache = new FilesystemAdapter("binance", 0, __DIR__."/../../storage/cache");
     }
 
     public function getAveragePrice($pairID)

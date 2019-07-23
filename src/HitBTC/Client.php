@@ -174,7 +174,7 @@ Class Client implements ClientInterface
             return new TooManyRequests($eMessage);
         }
 
-        if($error['error']['code'] == 1001  || $error['error']['code'] == 1001)
+        if($error['error']['code'] == 1002  || $error['error']['code'] == 1001)
         {
             return new AuthorisationFail($eMessage);
         }
@@ -327,7 +327,7 @@ Class Client implements ClientInterface
             $order->eClientOrderID = $data['clientOrderId'];
             $order->eOrderID = $data['id'];
             $order->side = $data['side'];
-            $order->value = (float)$data['quantity'];
+            $order->value = (float)$data['quantity'] ;
             $order->price = (float)$data['price'] ?? null;
             $order->date = new \DateTime($data['createdAt']);
             $order->status = $data['status'];
@@ -873,6 +873,21 @@ Class Client implements ClientInterface
         $this->historicalOrders = null;
         $this->activeOrders = null;
         $this->orderBook = [];
+    }
+
+    public function getTransactionHistory(array $params=[])
+    {
+        $response = $this->request('GET', "account/transactions", $params);
+
+        if(200 == $response->getStatusCode()){
+            $data = json_decode( (string)$response->getBody(), true);
+            return $data;
+        }
+        else
+        {
+            throw $this->handleErrorResponse($response);
+        }
+
     }
 
 }
