@@ -62,7 +62,7 @@ class WSFrame
         if($this->opcode == 0x1)
         {
             var_dump("GOT TEXT FRAME");
-            var_dump($str); die();
+            var_dump($str);
         }
 
         if($this->opcode == 0x2)
