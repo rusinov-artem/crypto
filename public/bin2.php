@@ -9,8 +9,21 @@ $config = include __DIR__ . "/../config.php";
 $bin2 = new \Crypto\Binance\Client();
 $bin2->apiKey = $config['binance.api.key'];
 $bin2->secretKey = $config['binance.api.secret'];
-$lk2 = $bin2->getActiveOrders();
-//$lk2 = $bin2->getNonZeroBalance();
+
+$pairs = $bin2->getPairs();
+foreach ($pairs as $pair)
+{
+    if($pair->id === "ETHTUSD")
+    {
+        var_dump("quete ".$pair->quoteCurrency);
+        var_dump("base ".$pair->baseCurrency);
+    }
+
+    var_dump($pair);
+
+}
+
+die();
 
 /**
  * @var \Crypto\Exchange\Order $order

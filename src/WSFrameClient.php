@@ -27,6 +27,32 @@ class WSFrameClient
        $this->initSocket();
        //$this->handshake();
     }
+
+    public function getHeaders()
+    {
+        $symbols = "1234567890qwertyuiopasdfgjklzxcvbnm";
+        $key = base64_encode(substr(str_shuffle($symbols), 0, 16));
+
+
+        $path = $this->path;
+        $header = "GET $path HTTP/1.1\r\n";
+        $header .= "Host: {$this->port}:{$this->host}\r\n";
+        $header .= "User-Agent: {$this->userAgent}\r\n";
+        $header .= "Upgrade: websocket\r\n";
+        $header .= "Sec-WebSocket-Protocol: chat, superchat\r\n";
+        $header .= "Sec-WebSocket-Extensions: deflate-stream\r\n";
+        $header .= "Connection: Upgrade\r\n";
+
+        if (!empty($this->eaders)) {
+            foreach ($this->headers as $headerKey => $value) {
+                $header .= "$headerKey: " . $value . "\r\n";
+            }
+        }
+        $header .= "Sec-WebSocket-Key: " . $key . "\r\n";
+        $header .= "Sec-WebSocket-Version: 13\r\n\r\n";
+        return $header;
+    }
+
     public function initSocket()
     {
 

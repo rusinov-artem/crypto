@@ -96,6 +96,8 @@ class Client implements ClientInterface
             $limit = new PairLimit();
             $limit->pairID = $pair->id;
 
+            $limit->data = $symbol['filters'];
+
             $filter = new PairFilter($symbol['filters']);
 
             if($filterItem = $filter->getFilter("PRICE_FILTER"))
