@@ -37,7 +37,7 @@ class TradeListener
                 for($i = 0; $i<= $n; $i++) {
                     TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
                     sleep(1);
-                    var_dump("i - $n");
+                    var_dump("$i - $n");
                 }
 
                 goto m1;
