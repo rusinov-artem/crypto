@@ -25,7 +25,7 @@ class WSFrameClient
        $this->host = $host;
        $this->port = $port;
        $this->initSocket();
-       //$this->handshake();
+
     }
 
     public function getHeaders()
@@ -96,7 +96,17 @@ class WSFrameClient
         {
             stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_ANY_CLIENT);
             fwrite($this->socket, $header);
-            echo $response =  fread($this->socket,8192);
+            $response =  fread($this->socket,8192);
+            $r = preg_match("/HTTP\/1\.1\ 101\ Switching\ Protocols/", $response);
+            if(!$r)
+            {
+                //var_dump($response);
+                if(preg_match("/Too many requests/", $response))
+                {
+                    throw new \Exception("Too many requests", 429);
+                }
+            }
+
         } else {
             throw new \Exception("Unable to create socket", 1);
         }
@@ -186,10 +196,10 @@ class WSFrameClient
         if($frame->opcode === 0x9)
         {
             $r = $this->pong();
-            var_dump("Pong sent $r");
+           // var_dump("Pong sent $r");
         }
 
-        var_dump("OPCODE IS {$frame->opcode}");
+        //var_dump("OPCODE IS {$frame->opcode}");
         m1:
         if(strlen($str) > $frame->offset + $frame->dataLength)
         {
