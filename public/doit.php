@@ -33,11 +33,11 @@ class TradeListener
         {
             if($t->getCode() === 429 )
 
-                $n++;
+                $n+=$n*(0.1);
                 for($i = 0; $i<= $n; $i++) {
                     TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
                     sleep(1);
-                    var_dump($i);
+                    var_dump("i - $n");
                 }
 
                 goto m1;
