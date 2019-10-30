@@ -10,6 +10,10 @@ class Order
     public $eOrderID; //Идентификатор ордера на бирже
     public $eClientOrderID; //Клиентский идентификатор ордера на бирже
     public $date; //Дата размещения ордера на бирже
+    /**
+     * @var \DateTime
+     */
+    public $updatedAt;
     public $price;
     public $value;
     public $pairID; //Идентификатор пары

@@ -382,7 +382,8 @@ class Client implements ClientInterface
             {
                 $order = new Order();
                 $order->pairID = $orderData['symbol'];
-                $order->id = $orderData['clientOrderId'];
+                $order->eOrderID = $orderData['orderId'];
+                $order->eClientOrderID = $orderData['clientOrderId'];
                 $order->price = (float)$orderData['price'];
                 $order->value = (float)$orderData['origQty'];
                 $order->traded = (float)$orderData['executedQty'];
@@ -390,8 +391,9 @@ class Client implements ClientInterface
                 $order->type = strtolower($orderData['type']);
                 $order->side = strtolower($orderData['side']);
                 $order->date = (new \DateTime())->setTimestamp($orderData['time'] / pow(10, 3));
+                $order->updatedAt = (new \DateTime())->setTimestamp($orderData['updateTime'] / pow(10, 3));
 
-                $result[$order->id] = $order;
+                $result[$order->eOrderID] = $order;
             }
 
             return $result;
@@ -431,6 +433,7 @@ class Client implements ClientInterface
     {
         // TODO: Implement getPairTrades() method.
     }
+
 
     public function getListenKey()
     {
