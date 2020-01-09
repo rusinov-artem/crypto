@@ -37,6 +37,11 @@ class WSFrame
 
     public function initHeaderInfo($str)
     {
+        // x3,x2,x1,0
+        //x0 * 2^0 + x1 * 2^1 + x2 *2^2 + x3 * 2^3
+        // 1) разделить на 2, остаток это x0, результат от деления
+        // 2)
+
         $firstByteBinary = sprintf('%08b', ord($str[0]));
         $secondByteBinary = sprintf('%08b', ord($str[1]));
         $this->opcode = bindec(substr($firstByteBinary, 4, 4));

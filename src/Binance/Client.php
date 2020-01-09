@@ -15,6 +15,9 @@ use Crypto\Exchange\PairLimit;
 use Crypto\Traits\Loggable;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Handler\StreamHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use Monolog\Logger;
 use mysql_xdevapi\Exception;
 use Psr\SimpleCache\CacheInterface;
@@ -26,6 +29,7 @@ class Client implements ClientInterface
 
     use Loggable;
 
+    public static $proxyList;
     public $apiKey;
     public $secretKey;
 
@@ -41,7 +45,18 @@ class Client implements ClientInterface
 
     public function __construct()
     {
-        $this->client = new \GuzzleHttp\Client();
+
+        $container = [];
+        $history = Middleware::history($container);
+
+        $handlerStack = HandlerStack::create();
+        //$handlerStack->setHandler(new StreamHandler());
+        // or $handlerStack = HandlerStack::create($mock); if using the Mock handler.
+
+        // Add the history middleware to the handler stack.
+        $handlerStack->push($history);
+
+        $this->client = new \GuzzleHttp\Client(['handler' => $handlerStack]);
         $this->cache = new FilesystemAdapter("binance", 0, __DIR__."/../../storage/cache");
     }
 
@@ -472,6 +487,19 @@ class Client implements ClientInterface
 
     }
 
+    private function getProxy()
+    {
+        if(!static::$proxyList){
+            $file = __DIR__ . "/../../public/proxy.data";
+            static::$proxyList = $data = unserialize(file_get_contents($file));
+        }
+
+        $proxy = array_shift(static::$proxyList);
+        array_push(static::$proxyList, $proxy);
+        $proxy = $proxy;
+        $p = parse_url($proxy);
+        return $proxy;
+    }
 
     public function request( $version, $method,  $action, array $params)
     {
@@ -489,6 +517,10 @@ class Client implements ClientInterface
         $query = http_build_query($bparams, '', '&');
         $signature = hash_hmac('sha256', $query, $this->secretKey);
         $bparams['signature'] = $signature;
+
+        $dataToSend['proxy'] = $this->getProxy();
+        $dataToSend['verify'] = false;
+
 
         $dataToSend['headers'] =
             [

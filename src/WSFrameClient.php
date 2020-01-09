@@ -9,6 +9,10 @@ use HemiFrame\Lib\WebSocket\Client;
 class WSFrameClient
 {
 
+    /**
+     * @var \DateTime
+     */
+    public $lastTime;
     public $socket;
     private $host;
     private $port;
@@ -16,16 +20,25 @@ class WSFrameClient
     public $userAgent = "HITBOT";
     public $headers;
     public $casertPath = __DIR__."/cacert.pem";
+    public $proxy = null;
 
     private $currentStr = '';
 
-    public function __construct($host, $port, $path)
+    public function __construct($host, $port, $path, $proxy = null)
     {
+        $this->lastTime = new \DateTime();
         $this->path = $path;
        $this->host = $host;
        $this->port = $port;
+       $this->proxy = $proxy;
        $this->initSocket();
 
+    }
+
+    public function __destruct()
+    {
+        var_dump("DESTRUCTOR");
+        fclose($this->socket);
     }
 
     public function getHeaders()
@@ -63,7 +76,7 @@ class WSFrameClient
 
         $path = $this->path;
         $header = "GET $path HTTP/1.1\r\n";
-        $header .= "Host: {$this->port}:{$this->host}\r\n";
+        $header .= "Host: {$this->host}:{$this->port}\r\n";
         $header .= "User-Agent: {$this->userAgent}\r\n";
         $header .= "Upgrade: websocket\r\n";
         $header .= "Sec-WebSocket-Protocol: chat, superchat\r\n";
@@ -80,22 +93,65 @@ class WSFrameClient
 
 
         $context = stream_context_create();
-        stream_context_set_option($context, 'ssl', 'verify_host', true);
+        stream_context_set_option($context, 'ssl', 'verify_host', false);
         stream_context_set_option($context, 'ssl', 'cafile', $this->casertPath);
-        stream_context_set_option($context, 'ssl', 'verify_peer', true);
+        stream_context_set_option($context, 'ssl', 'verify_peer', false);
+        stream_context_set_option($context, 'ssl', 'verify_peer_name', false);
+        stream_context_set_option($context, 'ssl', 'allow_self_signed', true);
+      //  stream_context_set_option($context, 'ssl', 'peer_name ', $host);
 
 
-        if ($this->socket = stream_socket_client(
+
+        if($this->proxy)
+        {
+            $p = parse_url($this->proxy);
+            $this->socket = stream_socket_client(
+                "{$p['host']}:{$p['port']}",
+                $errno,
+                $errstr,
+                30,
+                STREAM_CLIENT_CONNECT,
+                $context
+            );
+
+
+
+
+            $hash = base64_encode("{$p['user']}:{$p['pass']}");
+            $proxyh = "CONNECT {$host}:{$port} HTTP/1.1\r\n";
+            $proxyh .= "Proxy-Authorization: Basic {$hash}\r\n\n";
+
+            $r = fwrite($this->socket, $proxyh);
+            $response =  fread($this->socket,8192);
+            $r = (stripos($response, "HTTP/1.0 200 Connection established" ) !== false);
+            if(!$r){
+                throw  new \Exception("PROXY ERROR. $response", -2);
+            }
+            stream_set_blocking ($this->socket, true);
+            $m = stream_get_meta_data($this->socket);
+            $r = stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_ANY_CLIENT);
+            stream_set_blocking ($this->socket, true);
+            $a = 0;
+
+        }
+        else{
+            $this->socket = stream_socket_client(
                 $host.':'.$port,
                 $errno,
                 $errstr,
                 30,
                 STREAM_CLIENT_CONNECT,
                 $context
-            ))
+            );
+            $r = stream_socket_enable_crypto($this->socket, true, SSL_VERSION_TLSv1_2);
+        }
+
+
+
+        if ($this->socket)
         {
-            stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_ANY_CLIENT);
-            fwrite($this->socket, $header);
+
+            $r = fwrite($this->socket, $header);
             $response =  fread($this->socket,8192);
             $r = preg_match("/HTTP\/1\.1\ 101\ Switching\ Protocols/", $response);
             if(!$r)
@@ -130,7 +186,7 @@ class WSFrameClient
     public function send($message)
     {
         $message = $this->encode($message);
-        return fwrite($this->socket, $message, strlen($message));
+        return $r = fwrite($this->socket, $message, strlen($message));
     }
 
     private function encode($text)
@@ -180,8 +236,10 @@ class WSFrameClient
             return false;
         }
 
-        if(!empty($this->currentStr))
+        if(!empty($this->currentStr)){
+            $this->lastTime = new \DateTime();
             return $this->buildFrame($this->currentStr);
+        }
 
         return false;
 
