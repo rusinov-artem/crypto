@@ -135,8 +135,9 @@ class TradeListener
             $event->add(1);
         });
 
+        unset($this->wsClient);
         $this->wsClient = $client;
-        TradeListener::$listeners[] = &$this;
+        TradeListener::$listeners[$this->key] = &$this;
         $event->add(1);
     }
 
@@ -158,8 +159,10 @@ var_dump("count api keys: ".count($keys));
 /**
  * @var $te Event
  */
-$te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te){
+$timerCounter = 0;
+$te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te, &$timerCounter){
 
+    $timerCounter++;
     $dt = new DateTime();
     $dt->sub(new DateInterval("PT30S"));
 
@@ -167,29 +170,33 @@ $te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te){
     $redTime->sub(new DateInterval("PT5M"));
 
     foreach (TradeListener::$listeners as $listener){
+
         if($listener->wsClient->lastTime < $dt){
-            $listener->log("No messages for 30 sec");
+            $listener->log("No messages for 30 sec [{$timerCounter}]");
             $r = $listener->wsClient->ping();
-            $listener->log("Ping $r");
+            $listener->log("Ping $r [{$timerCounter}]");
             if(!$r){
-                $listener->log("Reinit");
-                fclose( $listener->wsClient->socket );
-                $listener->wsClient->socket = null;
+                $listener->log("Reinit [{$timerCounter}]");
+                $listener->wsClient = null;
                 $listener->init();
             }
         }
 
         if($listener->wsClient->lastTime < $redTime){
-            $listener->log("RED LIMIT");
-            $listener->log("Reinit");
-            fclose( $listener->wsClient->socket );
-            $listener->wsClient->socket = null;
+            $listener->log("RED LIMIT [{$timerCounter}]");
+            $listener->log("Reinit [{$timerCounter}]");
+            $listener->wsClient = null;
             $listener->init();
         }
 
     }
-
+    $msg = (new \DateTime())->format("Y-m-d H:i:s")." \n";
+    $msg .= " listeners = ".count(TradeListener::$listeners)." \n";
+    $msg .= " proxy count ".count(TradeListener::$proxyList)." \n";
+    $msg .= "\n";
+    var_dump($msg);
     $te->addTimer(20);
+
 }, null);
 $te->addTimer(20);
 

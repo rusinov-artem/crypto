@@ -164,7 +164,7 @@ class WSFrameClient
             }
 
         } else {
-            throw new \Exception("Unable to create socket", 1);
+            throw new \Exception("Unable to create socket", -1);
         }
     }
 
@@ -172,9 +172,10 @@ class WSFrameClient
     {
         $s = [$this->socket];
         $k= [];
-       // $st = stream_context_get_options($this->socket);
-        //$r = stream_select($s,$k,$k, 3);
         $r =  fread($this->socket, 10000);
+        if(false === $r){
+            throw  new \Exception("Unable to fread", -1);
+        }
         return $r;
     }
 
