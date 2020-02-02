@@ -163,6 +163,8 @@ class WSFrameClient
                 }
             }
 
+            stream_set_blocking($this->socket, false);
+
         } else {
             throw new \Exception("Unable to create socket", -1);
         }
@@ -213,7 +215,6 @@ class WSFrameClient
     {
         $frame = chr(bindec("10001001")) . chr(bindec("10000000")) ;
         return $r = fwrite($this->socket, $frame, strlen($frame));
-
     }
 
     public function getFrame()

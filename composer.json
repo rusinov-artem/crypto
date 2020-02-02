@@ -25,6 +25,9 @@
         "psr-4": {
             "Crypto\\": "src",
             "Crypto\\Tests\\": "tests"
-        }
+        },
+        "files": [
+            "src/functions.php"
+        ]
     }
 }

@@ -11,11 +11,18 @@ $keys = unserialize($keys);
 shuffle($keys);
 var_dump($keys[0]);
 
+set_error_handler(function($no, $str, $file, $line, $context){
+    $msg =  "$str, $file:$line $no";
+    echo "$msg\n";
+    throw new \Exception($msg);
+});
+
 class TradeListener
 {
     public $key;
     public $secret;
     public $lastTime;
+    public static $isRuning = false;
 
     /**
      * @var WSFrameClient
@@ -58,11 +65,16 @@ class TradeListener
         $n = 0;
         m1:
         try{
-            TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
+
+            if(!static::$isRuning){
+                TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
+            }
+
             $proxy =  $this->getProxy();
             $client = new \Crypto\WSFrameClient('api.hitbtc.com', 443, '/api/2/ws', $proxy);
         }catch (\Throwable $t)
         {
+            var_dump($t->getMessage());
             if($t->getCode() === 429 ){
                 $n+=$n*(0.1);
             }
@@ -73,12 +85,18 @@ class TradeListener
                 var_dump($p);
             }
 
-                for($i = 0; $i<= $n; $i++) {
-                    TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
-                    var_dump("$i - $n");
-                }
+            if(!static::$isRuning){
+                TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
+            }
 
-                goto m1;
+                if(count(static::$proxyList)>0){
+                    goto m1;
+                }
+                else
+                {
+                    var_dump("NO PROXY");
+                 }
+
             }
 
         static::$id++;
@@ -117,7 +135,6 @@ class TradeListener
             }
             catch (Throwable $t)
             {
-                var_dump($t->getMessage());
                 $this->log($t->getMessage());
 
                 if($t->getCode() === -1){
@@ -127,12 +144,21 @@ class TradeListener
                 return;
             }
 
-            if($frame)
+            if($frame && (9 != $frame->opcode))
             {
                 $msg = $frame->getData();
+                $msg = substr($msg, 0, 500);
+                $dt = (new \DateTime())->format("Y-m-d H:i:s");
                 $this->log("[{$frame->opcode}] [length={$frame->dataLength}] {$msg}");
             }
-            $event->add(1);
+            $r = $event->add(1);
+            if(!$r)
+            {
+                var_dump("WARNING2. $r");
+                sleep(1);
+                $r = $event->add(1);
+                var_dump("ASSERT 2 $r");
+            }
         });
 
         unset($this->wsClient);
@@ -143,10 +169,10 @@ class TradeListener
 
     public function log($m)
     {
-
         $dt = (new \DateTime())->format("Y-m-d H:i:s");
-        $name = md5($this->key);
-        file_put_contents(__DIR__."/../storage/log/doit/{$name}.log", "[{$dt}] {$m}\n", FILE_APPEND);
+        $m =  "[{$dt}] {$this->key} {$m}\n";
+        echo $m;
+
     }
 }
 
@@ -162,43 +188,63 @@ var_dump("count api keys: ".count($keys));
 $timerCounter = 0;
 $te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te, &$timerCounter){
 
-    $timerCounter++;
-    $dt = new DateTime();
-    $dt->sub(new DateInterval("PT30S"));
+    try{
+        $timerCounter++;
+        $dt = new DateTime();
+        $dt->sub(new DateInterval("PT30S"));
 
-    $redTime = clone $dt;
-    $redTime->sub(new DateInterval("PT5M"));
+        $redTime = clone $dt;
+        $redTime->sub(new DateInterval("PT5M"));
 
-    foreach (TradeListener::$listeners as $listener){
+        foreach (TradeListener::$listeners as $listener){
 
-        if($listener->wsClient->lastTime < $dt){
-            $listener->log("No messages for 30 sec [{$timerCounter}]");
-            $r = $listener->wsClient->ping();
-            $listener->log("Ping $r [{$timerCounter}]");
-            if(!$r){
+            if($listener->wsClient->lastTime < $dt){
+                $listener->log("No messages for 30 sec [{$timerCounter}] ".$listener->wsClient->lastTime->format("Y-m-d H:i:s"));
+                try{
+                    $r = $listener->wsClient->ping();
+                }
+                catch (\Throwable $t){
+                    $listener->log($t->getMessage());
+                    $r = 0;
+                }
+
+                $listener->log("Ping $r [{$timerCounter}]");
+                if(!$r){
+                    $listener->log("Reinit [{$timerCounter}]");
+                    $listener->wsClient = null;
+                    $listener->init();
+                }
+            }
+
+            if($listener->wsClient->lastTime < $redTime){
+                $listener->log("RED LIMIT [{$timerCounter}]");
                 $listener->log("Reinit [{$timerCounter}]");
                 $listener->wsClient = null;
                 $listener->init();
             }
+
         }
 
-        if($listener->wsClient->lastTime < $redTime){
-            $listener->log("RED LIMIT [{$timerCounter}]");
-            $listener->log("Reinit [{$timerCounter}]");
-            $listener->wsClient = null;
-            $listener->init();
-        }
-
+        $msg = (new \DateTime())->format("Y-m-d H:i:s")." \n";
+        $msg .= " listeners = ".count(TradeListener::$listeners)." \n";
+        $msg .= " proxy count ".count(TradeListener::$proxyList)." \n";
+        $msg .= "\n";
+        echo($msg);
+    }catch (\Throwable $t){
+        var_dump("WARNING ".$t->getMessage()." ".$t->getFile()." ".$t->getLine());
     }
-    $msg = (new \DateTime())->format("Y-m-d H:i:s")." \n";
-    $msg .= " listeners = ".count(TradeListener::$listeners)." \n";
-    $msg .= " proxy count ".count(TradeListener::$proxyList)." \n";
-    $msg .= "\n";
-    var_dump($msg);
-    $te->addTimer(20);
+
+    $r = $te->add(10);
+    if(!$r){
+        var_dump("WARNING! $r");
+        sleep(1);
+        $r = $te->add(10);
+        var_dump("ASSERT $r");
+    }
+
 
 }, null);
-$te->addTimer(20);
+$te->addTimer(10);
 
 foreach ($keys as $apiKey)
 {
@@ -213,12 +259,12 @@ foreach ($keys as $apiKey)
             $str = $t->getMessage() . "\n" . $t->getFile() . ":" . $t->getLine();
             var_dump($str);
         }
-        TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
 
+        if(!TradeListener::$isRuning){
+            TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
+        }
 
-
-    var_dump("counter = $counter");
-    TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
+        var_dump("counter = $counter");
 }
-
+TradeListener::$isRuning = true;
 TradeListener::$eventBase->dispatch();
