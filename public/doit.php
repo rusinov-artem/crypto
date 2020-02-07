@@ -64,6 +64,7 @@ class TradeListener
 
         $n = 0;
         m1:
+        $this->log('INIT: Loop m1');
         try{
 
             if(!static::$isRuning){
@@ -72,8 +73,10 @@ class TradeListener
 
             $proxy =  $this->getProxy();
             $client = new \Crypto\WSFrameClient('api.hitbtc.com', 443, '/api/2/ws', $proxy);
+            $this->log('INIT: client created');
         }catch (\Throwable $t)
         {
+            $this->log('INIT: '.exceptionToString($t));
             var_dump($t->getMessage());
             if($t->getCode() === 429 ){
                 $n+=$n*(0.1);
@@ -135,13 +138,9 @@ class TradeListener
             }
             catch (Throwable $t)
             {
+                $frame = null;
                 $this->log($t->getMessage());
-
-                if($t->getCode() === -1){
-                    $this->init();
-                }
-
-                return;
+                $this->init();
             }
 
             if($frame && (9 != $frame->opcode))
@@ -172,7 +171,6 @@ class TradeListener
         $dt = (new \DateTime())->format("Y-m-d H:i:s");
         $m =  "[{$dt}] {$this->key} {$m}\n";
         echo $m;
-
     }
 }
 
