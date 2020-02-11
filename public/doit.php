@@ -118,20 +118,19 @@ class TradeListener
 
         $client->send($message);
 
-        //var_dump($client->getFrame()->getData());
-
         $id = static::$id;
         $message = "{ \"method\": \"getTradingBalance\", \"params\": {}, \"id\": {$id} }";
 
         $client->send($message);
-        //var_dump($client->getFrame()->getData());
 
         $message = json_encode([ 'method'=>'subscribeReports', 'params'=>[], 'id'=>$id, ]);
         $client->send($message);
-        //var_dump($client->getFrame()->getData());
         stream_set_timeout($client->socket, 10);
         stream_set_blocking($client->socket, false);
 
+        /**
+         * @var $event Event
+         */
         $event = new Event(static::$eventBase, $client->socket, Event::READ, function($socket, $n, $x)use($client, &$event){
             try{
                 $frame = $client->getFrame();
@@ -141,6 +140,7 @@ class TradeListener
                 $frame = null;
                 $this->log($t->getMessage());
                 $this->init();
+                $this->log("inited");
             }
 
             if($frame && (9 != $frame->opcode))
@@ -150,6 +150,7 @@ class TradeListener
                 $dt = (new \DateTime())->format("Y-m-d H:i:s");
                 $this->log("[{$frame->opcode}] [length={$frame->dataLength}] {$msg}");
             }
+
             $r = $event->add(1);
             if(!$r)
             {
@@ -158,6 +159,11 @@ class TradeListener
                 $r = $event->add(1);
                 var_dump("ASSERT 2 $r");
             }
+
+            if(!$event->pending){
+                $this->log("event => false");
+            }
+
         });
 
         unset($this->wsClient);

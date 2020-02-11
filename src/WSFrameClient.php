@@ -226,15 +226,6 @@ class WSFrameClient
 
         if(empty($this->currentStr))
         {
-//            $status = $this->ping();
-//
-//            var_dump("ping status = ".$status);
-//
-//            if($status < 1)
-//            {
-//                throw new \Exception("Socket connection lost");
-//            }
-
             return false;
         }
 
@@ -256,10 +247,8 @@ class WSFrameClient
         if($frame->opcode === 0x9)
         {
             $r = $this->pong();
-           // var_dump("Pong sent $r");
         }
 
-        //var_dump("OPCODE IS {$frame->opcode}");
         m1:
         if(strlen($str) > $frame->offset + $frame->dataLength)
         {
@@ -281,6 +270,8 @@ class WSFrameClient
                 $len = strlen($str);
 
             }while( $len < $frame->offset + $frame->dataLength);
+            $dt = (new \DateTime())->format("Y-m-d H:i:s");
+            echo "\n{$dt} goto warning 1\n";
             goto m1;
         }
 
