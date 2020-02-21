@@ -67,8 +67,10 @@ class TradeListener
         $this->log('INIT: Loop m1');
         try{
 
-            if(!static::$isRuning){
+            if(!TradeListener::$isRuning){
+                TradeListener::$isRuning=true;
                 TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
+                TradeListener::$isRuning = false;
             }
 
             $proxy =  $this->getProxy();
@@ -88,8 +90,10 @@ class TradeListener
                 var_dump($p);
             }
 
-            if(!static::$isRuning){
+            if(!TradeListener::$isRuning){
+                TradeListener::$isRuning = true;
                 TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
+                TradeListener::$isRuning = false;
             }
 
                 if(count(static::$proxyList)>0){
@@ -116,15 +120,24 @@ class TradeListener
               }
             }";
 
-        $client->send($message);
+        $r = $client->send($message);
+        if(!$r){
+            $this->log("Unable to send $message");
+        }
 
         $id = static::$id;
         $message = "{ \"method\": \"getTradingBalance\", \"params\": {}, \"id\": {$id} }";
 
-        $client->send($message);
+        $r = $client->send($message);
+        if(!$r){
+            $this->log("Unable to send $message");
+        }
 
         $message = json_encode([ 'method'=>'subscribeReports', 'params'=>[], 'id'=>$id, ]);
-        $client->send($message);
+        $r = $client->send($message);
+        if(!$r){
+            $this->log("Unable to send $message");
+        }
         stream_set_timeout($client->socket, 10);
         stream_set_blocking($client->socket, false);
 
@@ -265,7 +278,9 @@ foreach ($keys as $apiKey)
         }
 
         if(!TradeListener::$isRuning){
+            TradeListener::$isRuning = true;
             TradeListener::$eventBase->loop(EventBase::LOOP_NONBLOCK);
+            TradeListener::$isRuning = false;
         }
 
         var_dump("counter = $counter");

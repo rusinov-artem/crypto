@@ -75,8 +75,11 @@ class WSFrame
         }
 
         $this->mask = ($secondByteBinary[0] == '1') ? true : false;
+        $r = decbin(ord($str[1]));
+        $r1 = decbin(127);
         $payloadLength = ord($str[1]) & 127;
 
+        $r3 = decbin(ord($str[1]) & 127);
         if ($payloadLength === 126) {
 
             if($this->mask)
@@ -91,7 +94,8 @@ class WSFrame
 
             $this->dataLength =  bindec(sprintf('%08b', ord($str[2])) . sprintf('%08b', ord($str[3])));
             $this->offset  = $payloadOffset;
-        } elseif ($payloadLength === 127) {
+        }
+        elseif ($payloadLength === 127) {
             if($this->mask)
             {
                 $this->maskKey = substr($str, 10, 4);
@@ -107,7 +111,8 @@ class WSFrame
                 $tmp .= sprintf('%08b', ord($str[$i + 2]));
             }
             $this->dataLength = bindec($tmp);
-        } else {
+        }
+        else {
             if($this->mask)
             {
                 $this->maskKey = substr($str, 2, 4);

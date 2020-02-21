@@ -98,7 +98,10 @@ class WSFrameClient
         stream_context_set_option($context, 'ssl', 'verify_peer', false);
         stream_context_set_option($context, 'ssl', 'verify_peer_name', false);
         stream_context_set_option($context, 'ssl', 'allow_self_signed', true);
-      //  stream_context_set_option($context, 'ssl', 'peer_name ', $host);
+
+
+
+        //  stream_context_set_option($context, 'ssl', 'peer_name ', $host);
 
 
 
@@ -113,7 +116,6 @@ class WSFrameClient
                 STREAM_CLIENT_CONNECT,
                 $context
             );
-
 
 
 
@@ -174,7 +176,7 @@ class WSFrameClient
     {
         $s = [$this->socket];
         $k= [];
-        $r =  fread($this->socket, 10000);
+        $r =  fread($this->socket, 100000);
         if(false === $r){
             throw  new \Exception("Unable to fread", -1);
         }
@@ -188,6 +190,7 @@ class WSFrameClient
 
     public function send($message)
     {
+        echo "SEND $message\n";
         $message = $this->encode($message);
         return $r = fwrite($this->socket, $message, strlen($message));
     }
@@ -265,12 +268,32 @@ class WSFrameClient
         }
         elseif(strlen($str) < $frame->offset + $frame->dataLength)
         {
+            $stopper = 0;
             do{
-                $str .= $this->read();
+
+               // usleep(0.1 * pow(10, 6));
+                $data = $this->read();
+                $l = strlen($str);
+                if(strlen($data)<1)
+                {
+                    $stopper++;
+                    //echo "empty data! len={$frame->offset} + {$frame->dataLength} \n";
+                    usleep(0.01 * pow(10, 6));
+                }
+
+                $str .= $data;
                 $len = strlen($str);
 
-            }while( $len < $frame->offset + $frame->dataLength);
+                $sum =  $frame->offset + $frame->dataLength;
+            }while( ($len < $sum) && $stopper < 100);
             $dt = (new \DateTime())->format("Y-m-d H:i:s");
+            if($stopper >= 100){
+                echo "\n{$dt} do while warning $stopper\n";
+                $ss = substr($str, 0, -100);
+                echo "\n{$dt} do while warning $ss\n";
+                echo "\n{$dt} do while warning $len < $sum \n";
+                throw new \Exception('Unable to build frame');
+            }
             echo "\n{$dt} goto warning 1\n";
             goto m1;
         }
