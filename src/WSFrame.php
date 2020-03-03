@@ -16,6 +16,7 @@ class WSFrame
     public $dataLength;
     public $rawData;
     public $offset;
+    public $isReady;
 
     public function setRawData($data)
     {
@@ -44,6 +45,8 @@ class WSFrame
 
         $firstByteBinary = sprintf('%08b', ord($str[0]));
         $secondByteBinary = sprintf('%08b', ord($str[1]));
+        $flags = substr($firstByteBinary, 0,4);
+        $fin = (bool)(int)$flags[0];
         $this->opcode = bindec(substr($firstByteBinary, 4, 4));
         if($this->opcode === 0x9)
         {

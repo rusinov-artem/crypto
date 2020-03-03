@@ -5,6 +5,7 @@ use Crypto\WSFrameClient;
 include __DIR__."/../vendor/autoload.php";
 ini_set('display_startup_errors',1);
 ini_set('display_errors', 1);
+ini_set('default_socket_timeout', 5);
 
 $keys = file_get_contents(__DIR__."/../storage/hitkeys.data");
 $keys = unserialize($keys);
@@ -141,27 +142,39 @@ class TradeListener
         stream_set_timeout($client->socket, 10);
         stream_set_blocking($client->socket, false);
 
+        $client->onFrameReady('main', function ($frame){
+
+            if($frame && (9 != $frame->opcode))
+            {
+                $msg = $frame->getData();
+                $msg = substr($msg, 0, 112);
+                $dt = (new \DateTime())->format("Y-m-d H:i:s");
+                $this->log("[{$frame->opcode}] [length={$frame->dataLength}] {$msg}");
+            }
+
+        });
+
         /**
          * @var $event Event
          */
         $event = new Event(static::$eventBase, $client->socket, Event::READ, function($socket, $n, $x)use($client, &$event){
             try{
+
+                if(strlen($client->currentStr)){
+                    $a = 0;
+                }
+
                 $frame = $client->getFrame();
+                if(!$frame){
+                    $a = 0;
+                }
             }
             catch (Throwable $t)
             {
                 $frame = null;
-                $this->log($t->getMessage());
+                $this->log(exceptionToString($t));
                 $this->init();
                 $this->log("inited");
-            }
-
-            if($frame && (9 != $frame->opcode))
-            {
-                $msg = $frame->getData();
-                $msg = substr($msg, 0, 500);
-                $dt = (new \DateTime())->format("Y-m-d H:i:s");
-                $this->log("[{$frame->opcode}] [length={$frame->dataLength}] {$msg}");
             }
 
             $r = $event->add(1);
@@ -265,7 +278,6 @@ $te->addTimer(10);
 
 foreach ($keys as $apiKey)
 {
-
         $counter++;
         $l = new TradeListener($apiKey['key'], $apiKey['secret']);
         try{
@@ -285,5 +297,9 @@ foreach ($keys as $apiKey)
 
         var_dump("counter = $counter");
 }
+
+$ipsGood = serialize(TradeListener::$proxyList);
+file_put_contents('goodproxy.data', $ipsGood);
+
 TradeListener::$isRuning = true;
 TradeListener::$eventBase->dispatch();

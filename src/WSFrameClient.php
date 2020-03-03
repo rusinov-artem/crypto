@@ -22,7 +22,9 @@ class WSFrameClient
     public $casertPath = __DIR__."/cacert.pem";
     public $proxy = null;
 
-    private $currentStr = '';
+    public $currentStr = '';
+
+    public $onFrameReady = [];
 
     public function __construct($host, $port, $path, $proxy = null)
     {
@@ -112,7 +114,7 @@ class WSFrameClient
                 "{$p['host']}:{$p['port']}",
                 $errno,
                 $errstr,
-                30,
+                1,
                 STREAM_CLIENT_CONNECT,
                 $context
             );
@@ -132,7 +134,6 @@ class WSFrameClient
             stream_set_blocking ($this->socket, true);
             $m = stream_get_meta_data($this->socket);
             $r = stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_ANY_CLIENT);
-            stream_set_blocking ($this->socket, true);
             $a = 0;
 
         }
@@ -141,7 +142,7 @@ class WSFrameClient
                 $host.':'.$port,
                 $errno,
                 $errstr,
-                30,
+                1,
                 STREAM_CLIENT_CONNECT,
                 $context
             );
@@ -176,7 +177,9 @@ class WSFrameClient
     {
         $s = [$this->socket];
         $k= [];
-        $r =  fread($this->socket, 100000);
+        //stream_set_blocking($this->socket,true);
+        $r =  fread($this->socket, 40960);
+        //stream_set_blocking($this->socket,false);
         if(false === $r){
             throw  new \Exception("Unable to fread", -1);
         }
@@ -234,7 +237,13 @@ class WSFrameClient
 
         if(!empty($this->currentStr)){
             $this->lastTime = new \DateTime();
-            return $this->buildFrame($this->currentStr);
+
+            $frame =  $this->buildFrame($this->currentStr);
+            if($frame instanceof WSFrame){
+                $this->triggerFrameReady($frame);
+                return $frame;
+            }
+
         }
 
         return false;
@@ -268,7 +277,7 @@ class WSFrameClient
         }
         elseif(strlen($str) < $frame->offset + $frame->dataLength)
         {
-            $stopper = 0;
+            $stopper = 0; $hl = 990000;
             do{
 
                // usleep(0.1 * pow(10, 6));
@@ -278,26 +287,38 @@ class WSFrameClient
                 {
                     $stopper++;
                     //echo "empty data! len={$frame->offset} + {$frame->dataLength} \n";
-                    usleep(0.01 * pow(10, 6));
+                    //usleep(0.01 * pow(10, 6));
                 }
 
                 $str .= $data;
                 $len = strlen($str);
 
                 $sum =  $frame->offset + $frame->dataLength;
-            }while( ($len < $sum) && $stopper < 100);
+            }while( ($len < $sum) && $stopper < $hl);
             $dt = (new \DateTime())->format("Y-m-d H:i:s");
-            if($stopper >= 100){
+            if($stopper >= $hl){
                 echo "\n{$dt} do while warning $stopper\n";
-                $ss = substr($str, 0, -100);
+                $ss = substr($str, -100);
                 echo "\n{$dt} do while warning $ss\n";
                 echo "\n{$dt} do while warning $len < $sum \n";
-                throw new \Exception('Unable to build frame');
+                var_dump($this->socket);
+                throw new \Exception("Unable to build frame", -1);
             }
             echo "\n{$dt} goto warning 1\n";
             goto m1;
         }
 
+    }
+
+    public function onFrameReady($callbackName, callable $callback ){
+        $this->onFrameReady[$callbackName] = $callback;
+    }
+
+    public function triggerFrameReady($frame)
+    {
+        foreach ($this->onFrameReady as $callback){
+            call_user_func_array($callback, ['frame'=>$frame]);
+        }
     }
 
 }
