@@ -33,7 +33,8 @@ class TradeListener
      * @var TradeListener[]
      */
     public static $listeners;
-    public static $id=0;
+    public static $increment=0;
+
     /**
      * @var EventBase
      */
@@ -107,7 +108,7 @@ class TradeListener
 
             }
 
-        static::$id++;
+        static::$increment++;
         $nonce = 'HELLO';
         $hash = hash_hmac('sha256', $nonce, $this->secret);
 
@@ -126,7 +127,7 @@ class TradeListener
             $this->log("Unable to send $message");
         }
 
-        $id = static::$id;
+        $id = static::$increment;
         $message = "{ \"method\": \"getTradingBalance\", \"params\": {}, \"id\": {$id} }";
 
         $r = $client->send($message);
@@ -142,14 +143,14 @@ class TradeListener
         stream_set_timeout($client->socket, 10);
         stream_set_blocking($client->socket, false);
 
-        $client->onFrameReady('main', function ($frame){
+        $client->onFrameReady('main', function ($frame, WSFrameClient $client){
 
             if($frame && (9 != $frame->opcode))
             {
                 $msg = $frame->getData();
-                $msg = substr($msg, 0, 112);
+                $msg = substr($msg, 0, 100);
                 $dt = (new \DateTime())->format("Y-m-d H:i:s");
-                $this->log("[{$frame->opcode}] [length={$frame->dataLength}] {$msg}");
+                $this->log("#[{$client->id}] [{$frame->opcode}] [length={$frame->dataLength}] {$msg}");
             }
 
         });

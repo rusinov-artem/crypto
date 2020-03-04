@@ -21,6 +21,8 @@ class WSFrameClient
     public $headers;
     public $casertPath = __DIR__."/cacert.pem";
     public $proxy = null;
+    public $id;
+    public static $increment = 0;
 
     public $currentStr = '';
 
@@ -28,18 +30,19 @@ class WSFrameClient
 
     public function __construct($host, $port, $path, $proxy = null)
     {
+        $this->id = WSFrameClient::$increment++;
         $this->lastTime = new \DateTime();
         $this->path = $path;
-       $this->host = $host;
-       $this->port = $port;
-       $this->proxy = $proxy;
-       $this->initSocket();
-
+        $this->host = $host;
+        $this->port = $port;
+        $this->proxy = $proxy;
+        $this->initSocket();
+        var_dump("WSFrameClient constructed #{$this->id}");
     }
 
     public function __destruct()
     {
-        var_dump("DESTRUCTOR");
+        var_dump("DESTRUCTOR $this->id");
         fclose($this->socket);
     }
 
@@ -318,7 +321,7 @@ class WSFrameClient
     public function triggerFrameReady($frame)
     {
         foreach ($this->onFrameReady as $callback){
-            call_user_func_array($callback, ['frame'=>$frame]);
+            call_user_func_array($callback, ['frame'=>$frame, 'wsfc'=>$this]);
         }
     }
 
