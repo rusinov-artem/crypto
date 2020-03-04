@@ -140,7 +140,7 @@ class TradeListener
         if(!$r){
             $this->log("Unable to send $message");
         }
-        stream_set_timeout($client->socket, 10);
+        stream_set_timeout($client->socket, 100);
         stream_set_blocking($client->socket, false);
 
         $client->onFrameReady('main', function ($frame, WSFrameClient $client){
@@ -263,15 +263,15 @@ $te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te, &$timerCou
         $msg .= "\n";
         echo($msg);
     }catch (\Throwable $t){
-        var_dump("WARNING ".$t->getMessage()." ".$t->getFile()." ".$t->getLine());
+        var_dump("TIMER WARNING ".$t->getMessage()." ".$t->getFile()." ".$t->getLine());
     }
 
     $r = $te->add(10);
     if(!$r){
-        var_dump("WARNING! $r");
+        var_dump("TIMER WARNING! $r");
         sleep(1);
         $r = $te->add(10);
-        var_dump("ASSERT $r");
+        var_dump("TIMER ASSERT $r");
     }
 
 

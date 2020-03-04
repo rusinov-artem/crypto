@@ -280,36 +280,26 @@ class WSFrameClient
         }
         elseif(strlen($str) < $frame->offset + $frame->dataLength)
         {
-            $stopper = 0; $hl = 990000;
             do{
 
-               // usleep(0.1 * pow(10, 6));
                 $data = $this->read();
-                $l = strlen($str);
-                if(strlen($data)<1)
-                {
-                    $stopper++;
-                    //echo "empty data! len={$frame->offset} + {$frame->dataLength} \n";
-                    //usleep(0.01 * pow(10, 6));
-                }
-
                 $str .= $data;
                 $len = strlen($str);
-
                 $sum =  $frame->offset + $frame->dataLength;
-            }while( ($len < $sum) && $stopper < $hl);
+            }while( ($len < $sum) && (!feof($this->socket)));
+
             $dt = (new \DateTime())->format("Y-m-d H:i:s");
-            if($stopper >= $hl){
-                echo "\n{$dt} do while warning $stopper\n";
-                $ss = substr($str, -100);
-                echo "\n{$dt} do while warning $ss\n";
-                echo "\n{$dt} do while warning $len < $sum \n";
-                var_dump($this->socket);
-                var_dump(stream_get_meta_data($this->socket));
-                throw new \Exception("Unable to build frame", -1);
+
+
+            if($len >= $sum){
+                goto m1;
+            }else
+            {
+                return false;
             }
-            echo "\n{$dt} goto warning 1\n";
-            goto m1;
+
+
+
         }
 
     }
