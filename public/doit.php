@@ -175,6 +175,7 @@ class TradeListener
                 $this->log(exceptionToString($t));
                 $this->init();
                 $this->log("inited");
+                return;
             }
 
             $r = $event->add(1);

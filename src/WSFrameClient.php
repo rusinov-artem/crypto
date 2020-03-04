@@ -302,6 +302,7 @@ class WSFrameClient
                 echo "\n{$dt} do while warning $ss\n";
                 echo "\n{$dt} do while warning $len < $sum \n";
                 var_dump($this->socket);
+                var_dump(stream_get_meta_data($this->socket));
                 throw new \Exception("Unable to build frame", -1);
             }
             echo "\n{$dt} goto warning 1\n";
