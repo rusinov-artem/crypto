@@ -78,7 +78,8 @@ class TradeListener
             $proxy =  $this->getProxy();
             $client = new \Crypto\WSFrameClient('api.hitbtc.com', 443, '/api/2/ws', $proxy);
             $this->log('INIT: client created');
-        }catch (\Throwable $t)
+        }
+        catch (\Throwable $t)
         {
             $this->log('INIT: '.exceptionToString($t));
             var_dump($t->getMessage());
@@ -174,7 +175,7 @@ class TradeListener
             {
                 $frame = null;
                 $this->log(exceptionToString($t));
-                $this->init();
+                $this->reinit();
                 $this->log("inited");
                 return;
             }
@@ -198,6 +199,17 @@ class TradeListener
         $this->wsClient = $client;
         TradeListener::$listeners[$this->key] = &$this;
         $event->add(1);
+    }
+
+    public function reinit($timeout=1){
+
+        $me = $this;
+        $te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te, &$me){
+            $this->log("REINIT {$me->key}");
+            $me->init();
+        }, null);
+        $te->addTimer($timeout);
+
     }
 
     public function log($m)
@@ -228,6 +240,7 @@ $te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te, &$timerCou
         $redTime = clone $dt;
         $redTime->sub(new DateInterval("PT5M"));
 
+        $reinitCounter = 0;
         foreach (TradeListener::$listeners as $listener){
 
             if($listener->wsClient->lastTime < $dt){
@@ -242,17 +255,19 @@ $te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te, &$timerCou
 
                 $listener->log("Ping $r [{$timerCounter}]");
                 if(!$r){
+                    $reinitCounter+=2;
                     $listener->log("Reinit [{$timerCounter}]");
                     $listener->wsClient = null;
-                    $listener->init();
+                    $listener->reinit($reinitCounter);
                 }
             }
 
             if($listener->wsClient->lastTime < $redTime){
+                $reinitCounter+=2;
                 $listener->log("RED LIMIT [{$timerCounter}]");
                 $listener->log("Reinit [{$timerCounter}]");
                 $listener->wsClient = null;
-                $listener->init();
+                $listener->reinit($reinitCounter);
             }
 
         }
@@ -277,7 +292,6 @@ $te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te, &$timerCou
 
 }, null);
 $te->addTimer(10);
-
 foreach ($keys as $apiKey)
 {
         $counter++;
@@ -298,6 +312,7 @@ foreach ($keys as $apiKey)
         }
 
         var_dump("counter = $counter");
+        gc_collect_cycles();
 }
 
 $ipsGood = serialize(TradeListener::$proxyList);
