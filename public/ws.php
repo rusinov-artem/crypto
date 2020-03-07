@@ -271,26 +271,6 @@ $dns_base = new EventDnsBase($base, TRUE);
 $refl = new ReflectionClass(EventSslContext::class);
 $c = $refl->getConstants();
 
-$event = new Event($base, $client->socket, Event::READ, function($socket, $n, $x)use($client, &$event){
-    //var_dump("WTF");
-    //var_dump($client->socket === $socket);
-    //var_dump(func_get_args());
-    $frame = $client->getFrame();
-   // var_dump($frame);
-    $event->add(1);
-});
-$event->add(1);
-
-$base->dispatch();
-var_dump($r);
-die();
-
-//$sSocket = ['lol'=>$socket];
-//$null = [];
-//$r = stream_select($sSocket, $null, $null, 10);
-//var_dump("Socket select {$r}");
-//var_dump($sSocket);
-die();
 
 while(1)
 {
