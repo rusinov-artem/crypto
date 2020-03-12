@@ -40,6 +40,7 @@ class TradeListener
      */
     public static $eventBase;
     public static $proxyList;
+    public $event = null;
 
     public function __construct($key, $secret)
     {
@@ -159,7 +160,8 @@ class TradeListener
         /**
          * @var $event Event
          */
-        $event = new Event(static::$eventBase, $client->socket, Event::READ, function($socket, $n, $x)use($client, &$event){
+        $me = $this;
+        $this->event = new Event(TradeListener::$eventBase, $client->socket, Event::READ, function($socket, $n, $x)use($client, &$me){
             try{
 
                 if(strlen($client->currentStr)){
@@ -180,16 +182,16 @@ class TradeListener
                 return;
             }
 
-            $r = $event->add(1);
+            $r = $me->event->add(1);
             if(!$r)
             {
                 var_dump("WARNING2. $r");
                 sleep(1);
-                $r = $event->add(1);
+                $r = $me->event->add(1);
                 var_dump("ASSERT 2 $r");
             }
 
-            if(!$event->pending){
+            if(!$me->event->pending){
                 $this->log("event => false");
             }
 
@@ -198,7 +200,7 @@ class TradeListener
         unset($this->wsClient);
         $this->wsClient = $client;
         TradeListener::$listeners[$this->key] = &$this;
-        $event->add(1);
+        $this->event->add(1);
     }
 
     public function reinit($timeout=1){
@@ -217,6 +219,13 @@ class TradeListener
         $dt = (new \DateTime())->format("Y-m-d H:i:s");
         $m =  "[{$dt}] {$this->key} {$m}\n";
         echo $m;
+    }
+
+    public function __destruct()
+    {
+        var_dump("TradeListener destructed");
+        $this->wsClient = null;
+
     }
 }
 
@@ -242,6 +251,10 @@ $te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te, &$timerCou
 
         $reinitCounter = 0;
         foreach (TradeListener::$listeners as $listener){
+
+            if(!$listener->wsClient){
+                continue;
+            }
 
             if($listener->wsClient->lastTime < $dt){
                 $listener->log("No messages for 30 sec [{$timerCounter}] ".$listener->wsClient->lastTime->format("Y-m-d H:i:s"));
