@@ -161,7 +161,7 @@ class TradeListener
          * @var $event Event
          */
         $me = $this;
-        $this->event = new Event(TradeListener::$eventBase, $client->socket, Event::READ, function($socket, $n, $x)use($client, &$me){
+        $this->event = new Event(TradeListener::$eventBase, $client->socket, Event::READ | Event::PERSIST, function($socket, $n, $x)use($client, &$me){
             try{
 
                 if(strlen($client->currentStr)){
@@ -180,15 +180,6 @@ class TradeListener
                 $this->reinit();
                 $this->log("inited");
                 return;
-            }
-
-            $r = $me->event->add(1);
-            if(!$r)
-            {
-                var_dump("WARNING2. $r");
-                sleep(1);
-                $r = $me->event->add(1);
-                var_dump("ASSERT 2 $r");
             }
 
             if(!$me->event->pending){

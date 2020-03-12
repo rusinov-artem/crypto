@@ -196,7 +196,7 @@ class WSFrameClient
 
     public function send($message)
     {
-        //echo "SEND $message\n";
+        echo "SEND $message\n";
         $message = $this->encode($message);
         return $r = fwrite($this->socket, $message, strlen($message));
     }
