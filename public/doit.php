@@ -247,7 +247,14 @@ $te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te, &$timerCou
                 continue;
             }
 
-            if($listener->wsClient->lastTime < $dt){
+            if($listener->wsClient->lastTime < $redTime){
+                $reinitCounter+=2;
+                $listener->log("RED LIMIT [{$timerCounter}]");
+                $listener->log("Reinit [{$timerCounter}]");
+                $listener->wsClient = null;
+                $listener->reinit($reinitCounter);
+            }
+            elseif($listener->wsClient->lastTime < $dt){
                 $listener->log("No messages for 30 sec [{$timerCounter}] ".$listener->wsClient->lastTime->format("Y-m-d H:i:s"));
                 try{
                     $r = $listener->wsClient->ping();
@@ -266,13 +273,7 @@ $te = Event::timer(TradeListener::$eventBase, function ($n) use(&$te, &$timerCou
                 }
             }
 
-            if($listener->wsClient->lastTime < $redTime){
-                $reinitCounter+=2;
-                $listener->log("RED LIMIT [{$timerCounter}]");
-                $listener->log("Reinit [{$timerCounter}]");
-                $listener->wsClient = null;
-                $listener->reinit($reinitCounter);
-            }
+
 
         }
 
