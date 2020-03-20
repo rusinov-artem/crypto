@@ -33,10 +33,68 @@ Class Client implements ClientInterface
     public $apiKey;
     public $secretKey;
 
+
+    //Cache
+    public $trades = [];
+    public $pairs = [];
+    public $activeOrders = null;
+    public $historicalOrders = null;
+    public $orderBook = [];
+
     /**
      * @var \GuzzleHttp\Client
      */
     private $client;
+
+    public function loadTrades($pair, $mCount = 999)
+    {
+
+
+        if(array_key_exists( $pair, $this->trades )) return;
+
+        $client = $this;
+        $i = 0;
+        $this->chunkAccountTrades($pair, function($trade, $index, $count) use (&$client, &$i, &$mCount, $pair)
+        {
+            /**
+             * @var $item Trade
+             */
+
+            $i++;
+
+            if($i >= $mCount) {
+                return false;
+            }
+
+            $client->trades[$pair][] = $trade;
+
+
+            if($count < 1000 && $index == $count)
+            {
+                return false;
+            }
+
+            return true;
+
+        }, "DESC", 1000);
+
+        if(!array_key_exists($pair, $this->trades))
+        {
+            $this->trades[$pair] = [];
+        }
+    }
+    public function clearPreloadedTrades($pair=null)
+    {
+        if($pair === null)
+        {
+            $this->trades = [];
+            return;
+        }
+
+        if(array_key_exists($pair, $this->trades))
+            unset($this->trades[$pair]);
+
+    }
 
     public function __construct($apiKey, $secretKey)
     {
@@ -48,10 +106,14 @@ Class Client implements ClientInterface
 
     /**
      * @return Pair[]
-     * @throws UnknownError
      */
     public function getPairs()
     {
+        if(!empty($this->pairs))
+        {
+            return $this->pairs;
+        }
+
         $response = $this->request("GET", 'public/symbol', []);
 
         if($response->getStatusCode() == 200)
@@ -62,8 +124,9 @@ Class Client implements ClientInterface
             {
                 $limit = new PairLimit();
                 $limit->lotSize = (float) $item['quantityIncrement'];
+                $limit->qtyTick = (float) $item['quantityIncrement'];
                 $limit->priceTick = (float) $item['tickSize'];
-                $limit->feeCurrency = (float) $item['feeCurrency'];
+                $limit->feeCurrency =  $item['feeCurrency'];
                 $limit->takeLiquidityRate = (float) $item['takeLiquidityRate'];
                 $limit->provideLiquidityRate = (float) $item['provideLiquidityRate'];
                 $limit->pairID = $item['id'];
@@ -77,6 +140,7 @@ Class Client implements ClientInterface
                 $result[$pair->id] = $pair;
             }
 
+            $this->pairs = $result;
             return $result;
         }
 
@@ -93,86 +157,91 @@ Class Client implements ClientInterface
     {
 
         $error = json_decode((string) $response->getBody(), true);
-        $eMessage = "{$error['message']} ({$error['description']})";
+        $eMessage = "{$error['error']['message']} ({$error['error']['description']})";
 
         if(in_array($response->getStatusCode(), [500, 502, 504]))
         {
             return new ExchangeError($eMessage);
         }
 
-        if($error['code'] == 403 || $error['code'] == 1003)
+        if($error['error']['code'] == 403 || $error['error']['code'] == 1003)
         {
             return new ActionIsForbidden($eMessage);
         }
 
-        if($error['code'] == 429)
+        if($error['error']['code'] == 429)
         {
             return new TooManyRequests($eMessage);
         }
 
-        if($error['code'] == 1001  || $error['code'] == 1001)
+        if($error['error']['code'] == 1002  || $error['error']['code'] == 1001)
         {
             return new AuthorisationFail($eMessage);
         }
 
-        if($error['code'] == 2001)
+        if($error['error']['code'] == 2001)
         {
             return new PairNotFound($eMessage);
         }
 
-        if($error['code'] == 2002)
+        if($error['error']['code'] == 2002)
         {
             return new CurrencyNotFound($eMessage);
         }
 
-        if($error['code'] == 2010)
+        if($error['error']['code'] == 2010)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 2011)
+        if($error['error']['code'] == 2011)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 2012)
+        if($error['error']['code'] == 2012)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 2020)
+        if($error['error']['code'] == 2020)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 2021)
+        if($error['error']['code'] == 2021)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 2022)
+        if($error['error']['code'] == 2022)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 20001)
+        if($error['error']['code'] == 20001)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 20003)
+        if($error['error']['code'] == 20003)
         {
             return new OrderRejected(new Order(), $eMessage);
         }
 
-        if($error['code'] == 20002)
+        if($error['error']['code'] == 20002)
         {
-            return new OrderNotFound(new Order());
+            return new OrderNotFound('');
         }
 
-        if($error['code'] == 10001)
+        if($error['error']['code'] == 10001)
         {
-            return new ValidationError(new Order());
+            return new ValidationError($error['error']['message'].'. '.$error['error']['description']);
+        }
+
+        if($error['error']['code'] == 2001)
+        {
+            return new PairNotFound($eMessage);
         }
 
         return new UnknownError($eMessage);
@@ -212,6 +281,9 @@ Class Client implements ClientInterface
 
     }
 
+    /**
+     * @return CurrencyBalance[]
+     */
     public function getNonZeroBalance()
     {
         $data = $this->getBalance();
@@ -240,8 +312,8 @@ Class Client implements ClientInterface
         $response =  $this->request("POST", 'order', [
             'symbol' => $order->pairID,
             'side' => $order->side,
-            'type' => 'limit',
-            'timeInForce' => 'GTC',
+            'type' => $order->type,
+            'timeInForce' => $order->timeInForce,
             'quantity' => $order->value,
             'price' => $order->price,
         ]);
@@ -252,10 +324,50 @@ Class Client implements ClientInterface
 
             $order = new Order();
             $order->pairID = $data['symbol'];
-            $order->id = $data['clientOrderId'];
+            $order->eClientOrderID = $data['clientOrderId'];
+            $order->eOrderID = $data['id'];
+            $order->side = $data['side'];
+            $order->value = (float)$data['quantity'] ;
+            $order->price = (float)$data['price'] ?? null;
+            $order->date = new \DateTime($data['createdAt']);
+            $order->status = $data['status'];
+            $order->traded = (float)$data['cumQuantity'];
+
+
+            return $order;
+        }
+
+        $this->log("Unable to create order. ".(string)$response->getBody(),[], Logger::WARNING);
+        $ex = $this->handleErrorResponse($response);
+
+        throw $ex;
+
+    }
+
+    public function updateOrder(Order &$order)
+    {
+
+        $response =  $this->request("PATCH ", "order/{$order->eClientOrderID}", [
+            'symbol' => $order->pairID,
+            'side' => $order->side,
+            'type' => $order->type,
+            'timeInForce' => $order->timeInForce,
+            'quantity' => $order->value,
+            'price' => $order->price,
+            //'requestClientId'=> $order->eClientOrderID,
+        ]);
+
+        if($response->getStatusCode() == 200) {
+
+            $data = json_decode((string)$response->getBody(), true);
+
+            $order = new Order();
+            $order->pairID = $data['symbol'];
+            $order->eClientOrderID = $data['clientOrderId'];
+            $order->eOrderID = $data['id'];
             $order->side = $data['side'];
             $order->value = (float)$data['quantity'];
-            $order->price = (float)$data['price'];
+            $order->price = (float)$data['price'] ?? null;
             $order->date = new \DateTime($data['createdAt']);
             $order->status = $data['status'];
             $order->traded = (float)$data['cumQuantity'];
@@ -266,14 +378,7 @@ Class Client implements ClientInterface
 
         $ex = $this->handleErrorResponse($response);
 
-        if($ex instanceof OrderRejected)
-        {
-            $ex->order = $order;
-            throw new $ex;
-        }
-
         throw $ex;
-
     }
 
     /**
@@ -283,7 +388,7 @@ Class Client implements ClientInterface
      */
     public function closeOrder(Order &$order)
     {
-        $response = $this->request("DELETE", "order/{$order->id}", []);
+        $response = $this->request("DELETE", "order/{$order->eClientOrderID}", []);
 
         if($response->getStatusCode() == 200)
         {
@@ -291,7 +396,8 @@ Class Client implements ClientInterface
 
             $order = new Order();
             $order->pairID = $item['symbol'];
-            $order->id = $item['clientOrderId'];
+            $order->eClientOrderID = $item['clientOrderId'];
+            $order->eOrderID = $item['id'];
             $order->side = $item['side'];
             $order->value = (float)$item['quantity'];
             $order->price = (float)$item['price'];
@@ -318,8 +424,14 @@ Class Client implements ClientInterface
      * @return Order[]
      * @throws \Exception
      */
-    public function getActiveOrders()
+    public function getActiveOrders($forse = false)
     {
+
+        if($this->activeOrders !== null && $forse === false)
+        {
+            return $this->activeOrders;
+        }
+
         $response = $this->request("GET", 'order', []);
 
         if($response->getStatusCode() == 200)
@@ -331,7 +443,8 @@ Class Client implements ClientInterface
             {
                 $order = new Order();
                 $order->pairID = $item['symbol'];
-                $order->id = $item['clientOrderId'];
+                $order->eClientOrderID = $item['clientOrderId'];
+                $order->eOrderID = $item['id'];
                 $order->side = $item['side'];
                 $order->value = (float) $item['quantity'];
                 $order->price = (float) $item['price'];
@@ -339,8 +452,11 @@ Class Client implements ClientInterface
                 $order->status = $item['status'];
                 $order->traded = (float) $item['cumQuantity'];
 
-                $result[$order->id] = $order;
+                $result[$order->eClientOrderID] = $order;
             }
+
+            $this->activeOrders = $result;
+
             return $result;
         }
 
@@ -353,26 +469,33 @@ Class Client implements ClientInterface
      * @return bool
      * @throws \Exception
      */
-    public function checkOrderIsActive(Order &$order)
+    public function checkOrderIsActive(Order &$order, $forse = false)
     {
-        $orders = $this->getActiveOrders();
+        $orders = $this->getActiveOrders($forse);
 
-        if($result = (array_key_exists($order->id, $orders)))
+        if($result = (array_key_exists($order->eClientOrderID, $orders)))
         {
-            $order = $orders[$order->id];
+            $order = $orders[$order->eClientOrderID];
         }
 
         return $result;
 
     }
 
-    public function getOrderStatus(Order &$order)
+    public function getOrderStatus(Order &$order, $forse = false)
     {
-        if($isActive = $this->checkOrderIsActive($order))
+        if($isActive = $this->checkOrderIsActive($order, $forse))
         {
             return $order->status;
         }
 
+        if($this->isOrderCanceled($order))
+        {
+            $order->status = 'canceled';
+            return $order->status;
+        }
+
+        $this->loadTrades($order->pairID);
         //Ордер либо полностью исполнен либо canceled;
 
         $this->getOrderTrades($order);
@@ -383,7 +506,7 @@ Class Client implements ClientInterface
         }
         else
         {
-            $order->status = 'canceled';
+            $order->status = 'unknown';
         }
 
         return $order->status;
@@ -401,7 +524,7 @@ Class Client implements ClientInterface
              */
             if($item->date < $order->date) return false;
 
-            if($item->orderID === $order->id)
+            if($item->eOrderID == $order->eOrderID)
             {
                 $trades += $item->value;
             }
@@ -435,13 +558,16 @@ Class Client implements ClientInterface
             if($response->getStatusCode() == 200)
             {
                 $data = json_decode( (string)$response->getBody(), true);
-                if(count($data) < 1) break;
+                $dataCount = count($data);
+                if($dataCount < 1) {
+                    break;
+                }
 
                 foreach ($data as $item)
                 {
                     $counter++;
                     $item = $itemConverter($item);
-                    $r = $func($item);
+                    $r = $func($item, $counter, $dataCount);
                     if($r === false) return $counter;
                 }
 
@@ -459,6 +585,18 @@ Class Client implements ClientInterface
 
     public function chunkAccountTrades($pairID, callable $func, $sort="DESC", $chunkSize=100)
     {
+
+        if(array_key_exists($pairID ,$this->trades) && is_array($this->trades[$pairID]))
+        {
+            foreach ($this->trades[$pairID] as $trade)
+            {
+                $r = $func($trade);
+                if($r===false) return ;
+            }
+
+            return ;
+        }
+
         $p =
             [
               'sort'=>$sort,
@@ -469,27 +607,52 @@ Class Client implements ClientInterface
             $p['symbol'] = $pairID;
         }
 
-       return $this->chunker($func, 'GET', 'history/trades', $p, $chunkSize, function($item){
+        $pairs = $this->getPairs();
+
+
+       return $this->chunker($func, 'GET', 'history/trades', $p, $chunkSize, function($item) use(&$pairs) {
 
            $trade = new Trade();
            $trade->date = new \DateTime($item['timestamp']);
-           $trade->id = $item['id'];
-           $trade->orderID = $item['clientOrderId'];
+           $trade->eTradeID = (string)$item['id'];
+           $trade->eClientOrderID = (string)$item['clientOrderId'];
+           $trade->eOrderID = (string)$item['orderId'];
            $trade->pairID = $item['symbol'];
            $trade->side = $item['side'];
            $trade->value = (float) $item['quantity'];
            $trade->fee = (float) $item['fee'];
            $trade->price = (float) $item['price'];
+           $trade->feeCurrency = $pairs[$trade->pairID]->limit->feeCurrency;
 
            return $trade;
 
        });
     }
 
-    public function getOrderBook($pairID, $limit = 100)
+    /**
+     * @param $pairID
+     * @param int $limit
+     * @param bool $forse
+     * @return OrderBook
+     * @throws ActionIsForbidden
+     * @throws AuthorisationFail
+     * @throws CurrencyNotFound
+     * @throws ExchangeError
+     * @throws OrderNotFound
+     * @throws OrderRejected
+     * @throws PairNotFound
+     * @throws TooManyRequests
+     * @throws UnknownError
+     * @throws ValidationError
+     */
+    public function getOrderBook($pairID, $limit = 100, $forse = false)
     {
-        $response = $this->request('GET', "public/orderbook/$pairID", ['limit'=>$limit]);
+        if(array_key_exists($pairID, $this->orderBook) && !$forse)
+        {
+            return $this->orderBook[$pairID];
+        }
 
+        $response = $this->request('GET', "public/orderbook/$pairID", ['limit'=>$limit]);
 
         if(200 == $response->getStatusCode())
         {
@@ -500,8 +663,8 @@ Class Client implements ClientInterface
             foreach ($data['ask'] as $item)
             {
                 $i = new OrderBookItem();
-                $i->price = $item['price'];
-                $i->size = $item['size'];
+                $i->price = (double)$item['price'];
+                $i->size = (double)$item['size'];
                 $orderBook->ask[] = $i;
             }
             unset($item);
@@ -509,16 +672,28 @@ Class Client implements ClientInterface
             foreach ($data['bid'] as $item)
             {
                 $i = new OrderBookItem();
-                $i->price = $item['price'];
-                $i->size = $item['size'];
+                $i->price = (double)$item['price'];
+                $i->size = (double)$item['size'];
                 $orderBook->bid[] = $i;
             }
 
-            return $orderBook;
+            return $this->orderBook[$pairID] = $orderBook;
+        }
+        else
+        {
+            $error = json_decode((string) $response->getBody(), true);
+            if(array_key_exists('error', $error))
+            {
+                $eMessage = "{$error['error']['message']} ({$error['error']['description']})";
+
+                if($error['error']['code'] == 2001)
+                {
+                    throw new PairNotFound("Pair $pairID not found" );
+                }
+            }
         }
 
         throw $this->handleErrorResponse($response);
-
 
     }
 
@@ -543,7 +718,6 @@ Class Client implements ClientInterface
 
     public function request($method, $action, array $params)
     {
-
         $dataToSend = [];
 
         $dataToSend['auth'] = [
@@ -585,6 +759,135 @@ Class Client implements ClientInterface
         }
 
         return $response;
+    }
+
+    public function getBuyPrice($pairID, $volume)
+    {
+        $result = 0;
+
+        $ob = $this->getOrderBook($pairID);
+
+        foreach ($ob->ask as $bookItem)
+        {
+            if($bookItem->size > $volume)
+            {
+                $result += $volume * $bookItem->price;
+                return $result;
+            }
+            else
+            {
+                $result += $bookItem->size * $bookItem->price;
+                $volume -= $bookItem->size;
+            }
+        }
+
+        return null;
+    }
+
+    public function getSellPrice($pairID, $volume)
+    {
+        $result = 0;
+
+        $ob = $this->getOrderBook($pairID);
+
+        foreach ($ob->bid as $bookItem)
+        {
+            if($bookItem->size > $volume)
+            {
+                $result += $volume * $bookItem->price;
+                return $result;
+            }
+            else
+            {
+                $result += $bookItem->size * $bookItem->price;
+                $volume -= $bookItem->size;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return Order[]
+     * @throws \Exception
+     */
+    public function getOrdersHistory($forse = false, $params = [])
+    {
+
+        if(!$forse && is_array($this->historicalOrders))
+        {
+            return $this->historicalOrders;
+        }
+
+        $response = $this->request("GET", "history/order", $params);
+
+        $result = [];
+        if($response->getStatusCode() == 200)
+        {
+            $data = json_decode((string) $response->getBody() ,true);
+
+
+            foreach($data as $item)
+            {
+                $order = new Order();
+                $order->pairID = $item['symbol'];
+                $order->eClientOrderID = $item['clientOrderId'];
+                $order->eOrderID = $item['id'];
+                $order->side = $item['side'];
+                $order->value = (float)$item['quantity'];
+                $order->price = (float)$item['price'];
+                $order->date =  new \DateTime($item['createdAt']);
+                $order->status = $item['status'];
+                $order->traded = (float)$item['cumQuantity'];
+
+                $result[$order->eOrderID] = $order;
+
+            }
+
+            return $this->historicalOrders = $result;
+        }
+
+
+        $ex =  $this->handleErrorResponse($response);
+        throw  $ex;
+
+    }
+
+    public function isOrderCanceled( Order $order, $force = false )
+    {
+        $orders = $this->getOrdersHistory($force);
+
+        if(!array_key_exists($order->eOrderID, $orders))
+        {
+            return false;
+        }
+
+        $order = $orders[$order->eOrderID];
+
+        return ($order->status === 'canceled');
+    }
+
+    public function clearCache()
+    {
+        $this->trades = [];
+        $this->historicalOrders = null;
+        $this->activeOrders = null;
+        $this->orderBook = [];
+    }
+
+    public function getTransactionHistory(array $params=[])
+    {
+        $response = $this->request('GET', "account/transactions", $params);
+
+        if(200 == $response->getStatusCode()){
+            $data = json_decode( (string)$response->getBody(), true);
+            return $data;
+        }
+        else
+        {
+            throw $this->handleErrorResponse($response);
+        }
+
     }
 
 }

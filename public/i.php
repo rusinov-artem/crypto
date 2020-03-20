@@ -1,5 +1,7 @@
 <?php
 
+use Crypto\Bot\BotFactory;
+
 require __DIR__."/../vendor/autoload.php";
 $config = include __DIR__ . "/../config.php";
 
@@ -7,13 +9,42 @@ $bs = new \Crypto\Bot\BotStorage();
 $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.secret']);
 
 
-$pair = "BCHSVUSD";
+//$pair = "BCHSVUSD";
+//$pair = "EDOUSD";
+//$pair = "BTCUSD";
+//$pair = "EOSUSD";
+//$pair = "ETHUSD";
+//$pair = "TRXUSD";
+//$pair = "PBTTBTC";
+//$pair = "LTCUSD";
+$pair = "USDUSDC";
+//$pair = 'CLOUSD';
+//$pair = 'DOGEUSD';
+//$pair = 'XRPUSDT';
+//$pair = 'XLMUSD';
+//$pair = "DASHUSD";
+//$pair = 'BTTUSD';
+//$pair = 'BCHABCUSD';
+//$pair = 'ZECUSD';
+//$pair = "NEOUSD";
+//$pair = "ETCUSD";
+//$pair = "ONTUSD";
+//$pair = "XEMUSD";
+//$pair = "ZRXUSD";
+//$pair = "VOCOUSD";
+//$pair = "ADAUSD";
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 0.5, 102.55, 0.3, 1, 10);
-foreach ($bots as $bot) {$bs->saveBot($bot);}
+//edo ada eos xrp xlm ltc
 
-$bots = \Crypto\Bot\BotFactory::spreadAttack($pair, 0.1, 109.9, 0.1, 0.1, 10);
-foreach ($bots as $bot) {$bs->saveBot($bot);}
+$bPrice = 38.81;
+$bots = BotFactory::spreadAttackEx($pair, -0.001, $bPrice, 0.35,  1, 351);
+foreach($bots as $bot){
+    //$bs->saveBot($bot);
+    var_dump("{$bot->inOrder->price} - {$bot->outOrder->price}");
+};
 
-$bot = \Crypto\Bot\BotFactory::simple($pair, 0.5, 98.9, 0.5, 1 );
-$bs->saveBot($bot);
+var_dump($pair, $bPrice);
+
+
+
+

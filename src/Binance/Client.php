@@ -6,14 +6,22 @@ namespace Crypto\Binance;
 
 use Crypto\Exchange\ClientInterface;
 use Crypto\Exchange\CurrencyBalance;
+use Crypto\Exchange\Exceptions\OrderNotFound;
+use Crypto\Exchange\Exceptions\OrderRejected;
+use Crypto\Exchange\Exceptions\PairNotFound;
+use Crypto\Exchange\Exceptions\UnknownError;
 use Crypto\Exchange\Order;
-use Crypto\Exchange\Pair;
 use Crypto\Exchange\PairLimit;
 use Crypto\Traits\Loggable;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Handler\StreamHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use Monolog\Logger;
+use mysql_xdevapi\Exception;
 use Psr\SimpleCache\CacheInterface;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Simple\FilesystemCache;
 
 class Client implements ClientInterface
@@ -21,6 +29,7 @@ class Client implements ClientInterface
 
     use Loggable;
 
+    public static $proxyList;
     public $apiKey;
     public $secretKey;
 
@@ -36,8 +45,19 @@ class Client implements ClientInterface
 
     public function __construct()
     {
-        $this->client = new \GuzzleHttp\Client();
-        $this->cache = new FilesystemCache("binance", 0, __DIR__."/../../storage/cache");
+
+        $container = [];
+        $history = Middleware::history($container);
+
+        $handlerStack = HandlerStack::create();
+        //$handlerStack->setHandler(new StreamHandler());
+        // or $handlerStack = HandlerStack::create($mock); if using the Mock handler.
+
+        // Add the history middleware to the handler stack.
+        $handlerStack->push($history);
+
+        $this->client = new \GuzzleHttp\Client(['handler' => $handlerStack]);
+        $this->cache = new FilesystemAdapter("binance", 0, __DIR__."/../../storage/cache");
     }
 
     public function getAveragePrice($pairID)
@@ -57,10 +77,10 @@ class Client implements ClientInterface
         if($response->getStatusCode()==200)
         {
             $data = json_decode((string)$response->getBody(), true);
-            $price = $data['price'];
+            $price = (float)$data['price'];
             if($this->cache)
             {
-                $this->cache->set($key, $price);
+                $this->cache->set($key, $price, 10);
             }
 
             return $price;
@@ -82,7 +102,8 @@ class Client implements ClientInterface
 
          foreach ($data['symbols'] as $symbol)
          {
-            $pair = new Pair();
+            $pair = new \Crypto\Binance\Pair();
+            $pair->setClient($this);
             $pair->id = $symbol['symbol'];
             $pair->baseCurrency = $symbol['baseAsset'];
             $pair->quoteCurrency = $symbol['quoteAsset'];
@@ -90,31 +111,26 @@ class Client implements ClientInterface
             $limit = new PairLimit();
             $limit->pairID = $pair->id;
 
-            foreach ($symbol['filters'] as $filter)
+            $limit->data = $symbol['filters'];
+
+            $filter = new PairFilter($symbol['filters']);
+
+            if($filterItem = $filter->getFilter("PRICE_FILTER"))
             {
-                if($filter['filterType'] === 'PRICE_FILTER')
-                {
-                    $limit->priceTick = $filter['tickSize'];
-                }
-
-                if($filter['filterType'] === 'LOT_SIZE')
-                {
-                    $limit->lotSize = $filter['minQty'];
-                    $limit->qtyTick = $filter['stepSize'];
-                    if($filter['stepSize'] !== $filter['minQty'])
-                    {
-                        var_dump($symbol);
-                    }
-                }
-
-                if($filter['filterType'] ===  'MIN_NOTIONAL')
-                {
-                    $limit->lotSize = $filter['minNotional'] / $this->getAveragePrice($symbol['symbol']);
-                }
-
-
-
+                $limit->priceTick = (float)$filterItem['tickSize'];
             }
+
+            if($filterItem = $filter->getFilter("LOT_SIZE"))
+            {
+                $limit->lotSize = (float) $filterItem['minQty'];
+                $limit->qtyTick = (float)$filterItem['stepSize'];
+            }
+
+            if($filterItem = $filter->getFilter("MIN_NOTIONAL"))
+            {
+                $limit->minNotional = (float)$filterItem['minNotional'];
+            }
+
 
             $pair->limit = $limit;
             $result[$pair->id] = $pair;
@@ -131,30 +147,192 @@ class Client implements ClientInterface
      */
     public function getBalance()
     {
-        // TODO: Implement getBalance() method.
+
+        $response = $this->request("v3", 'GET', "account", []);
+
+        if($response->getStatusCode() === 200)
+        {
+            $data = json_decode((string)$response->getBody(), true);
+
+            $result = [];
+
+            foreach ($data['balances'] as $bData)
+            {
+                $balance = new CurrencyBalance();
+                $balance->currency = $bData['asset'];
+                $balance->available = $bData['free'];
+                $balance->reserved = $bData['locked'];
+                $result[$balance->currency] = $balance;
+            }
+
+            return $result;
+
+        }
+
+        var_dump($a = (string)$response->getBody());
     }
 
     public function getNonZeroBalance()
     {
-        // TODO: Implement getNonZeroBalance() method.
+        $data = $this->getBalance();
+
+        $result = [];
+
+        foreach($data as $item)
+        {
+            if($item->available > 0 || $item->reserved > 0)
+            {
+                $result[$item->currency] = $item;
+            }
+        }
+
+        return $result;
     }
 
     /**
      * @param Order $order
      * @return Order
+     * @throws \Exception
      */
     public function createOrder(Order &$order)
     {
-        // TODO: Implement createOrder() method.
+        $params =
+            [
+              'symbol' =>$order->pairID,
+              'side' => strtoupper($order->side),
+              'type' => strtoupper($order->type),
+              'timeInForce' => "GTC",
+              'quantity' => $order->value,
+              'price' => $order->price,
+            ];
+
+        if($params['type'] == 'MARKET')
+        {
+            unset($params['timeInForce']);
+        }
+
+        if($order->id)
+        {
+            $params['newClientOrderId'] = $order->id;
+        }
+
+        $response = $this->request("v3", "POST", "order", $params );
+
+        if($response->getStatusCode() === 200)
+        {
+            $data = json_decode((string)$response->getBody(), true);
+
+            $order->pairID = $data['symbol'];
+            $order->id = $data['clientOrderId'];
+            $order->date = (new \DateTime())->setTimestamp($data['transactTime'] / pow(10, 3));
+            $order->price = (float)$data['price'];
+            $order->value = (float)$data['origQty'];
+            $order->traded = (float)$data['executedQty'];
+            $order->status = $this->convertOrderStatus($data['status']);
+            $order->type = strtolower($data['type']);
+            $order->side = strtolower($data['side']);
+
+            return $order;
+
+        }
+
+        $data = json_decode((string)$response->getBody(), true);
+
+        if($response->getStatusCode() == 400)
+        {
+            if($data['code'] == -1013)
+            {
+                throw new OrderRejected($order, "Invalid price. {$data['msg']}");
+            }
+
+            if($data['code'] == -1121 )
+            {
+                throw new PairNotFound("$order->pairID. {$data['msg']}");
+            }
+
+            if($data['code'] == -2010)
+            {
+                $pair = $this->getPairs()[$order->pairID];
+                $currency = $pair->quoteCurrency;
+                throw new OrderRejected($order, "Not enough $currency. {$data['msg']}");
+            }
+
+        }
+
+        throw new OrderRejected($order, "{$data['msg']}");
     }
 
+    public function convertOrderStatus($status)
+    {
+        // new, suspended, partiallyFilled, filled, canceled, expired
+        $map =
+            [
+               "NEW"=>'new',
+               "PARTIALLY_FILLED" => 'partiallyFilled',
+               "FILLED"=>'filled',
+               "CANCELED" => 'canceled',
+               "EXPIRED"=>"expired"
+            ];
+
+        if(!array_key_exists($status, $map))
+        {
+            return null;
+        }
+
+        return $map[$status];
+
+    }
+
+    public function getMinimalValue($pairID, $price)
+    {
+        $pairs = $this->getPairs();
+
+        if(!array_key_exists($pairID, $pairs))
+        {
+            throw new PairNotFound("$pairID not found");
+        }
+
+        $pair = $pairs[$pairID];
+
+        var_dump($pair->limit);
+
+        return $pair->limit->minNotional / $price;
+    }
     /**
      * @param Order $order
      * @return Order
      */
     public function closeOrder(Order &$order)
     {
-        // TODO: Implement closeOrder() method.
+        $params =
+            [
+                'symbol' =>$order->pairID,
+                'origClientOrderId' => $order->id,
+                'newClientOrderId' => $order->id,
+            ];
+
+
+        $response = $this->request("v3", "DELETE", "order", $params );
+
+        if($response->getStatusCode() === 200)
+        {
+            $data = json_decode((string)$response->getBody(), true);
+
+            $order->pairID = $data['symbol'];
+            $order->id = $data['clientOrderId'];
+            $order->price = (float)$data['price'];
+            $order->value = (float)$data['origQty'];
+            $order->traded = (float)$data['executedQty'];
+            $order->status = $this->convertOrderStatus($data['status']);
+            $order->type = strtolower($data['type']);
+            $order->side = strtolower($data['side']);
+
+            return $order;
+
+        }
+
+        throw new OrderNotFound($order->id);
+
     }
 
     /**
@@ -162,7 +340,79 @@ class Client implements ClientInterface
      */
     public function getActiveOrders()
     {
-        // TODO: Implement getActiveOrders() method.
+        //GET /api/v3/openOrders
+
+        $response = $this->request("v3", "GET", "openOrders",[]);
+
+        $data = json_decode((string)$response->getBody(), true);
+
+        if($response->getStatusCode()==200)
+        {
+            $result = [];
+
+            foreach ($data as $orderData)
+            {
+                $order = new Order();
+                $order->pairID = $orderData['symbol'];
+                $order->id = $orderData['clientOrderId'];
+                $order->price = (float)$orderData['price'];
+                $order->value = (float)$orderData['origQty'];
+                $order->traded = (float)$orderData['executedQty'];
+                $order->status = $this->convertOrderStatus($orderData['status']);
+                $order->type = strtolower($orderData['type']);
+                $order->side = strtolower($orderData['side']);
+                $order->date = (new \DateTime())->setTimestamp($orderData['time'] / pow(10, 3));
+
+                $result[$order->id] = $order;
+            }
+
+            return $result;
+        }
+
+        throw new UnknownError($data['msg'], $data['code']);
+
+
+    }
+
+
+    public function getAllOrders($pair, $orderId=null, int $startTime=null, int $endTime=null, $limit=1000)
+    {
+        //GET /api/v3/allOrders
+
+        $response = $this->request("v3", "GET", "allOrders",[
+            'symbol'=>$pair,
+            'orderId'=>$orderId,
+            'startTime'=>$startTime,
+            'endTime'=>$endTime,
+            'limit'=>$limit
+        ]);
+
+        $data = json_decode((string)$response->getBody(), true);
+
+        if($response->getStatusCode()==200)
+        {
+            $result = [];
+
+            foreach ($data as $orderData)
+            {
+                $order = new Order();
+                $order->pairID = $orderData['symbol'];
+                $order->eOrderID = $orderData['orderId'];
+                $order->eClientOrderID = $orderData['clientOrderId'];
+                $order->price = (float)$orderData['price'];
+                $order->value = (float)$orderData['origQty'];
+                $order->traded = (float)$orderData['executedQty'];
+                $order->status = $this->convertOrderStatus($orderData['status']);
+                $order->type = strtolower($orderData['type']);
+                $order->side = strtolower($orderData['side']);
+                $order->date = (new \DateTime())->setTimestamp($orderData['time'] / pow(10, 3));
+                $order->updatedAt = (new \DateTime())->setTimestamp($orderData['updateTime'] / pow(10, 3));
+
+                $result[$order->eOrderID] = $order;
+            }
+
+            return $result;
+        }
     }
 
     /**
@@ -199,14 +449,78 @@ class Client implements ClientInterface
         // TODO: Implement getPairTrades() method.
     }
 
+
+    public function getListenKey()
+    {
+        $response = $this->request("v1", "POST", "userDataStream",[]);
+
+        $data = json_decode((string)$response->getBody(), true);
+
+        if($response->getStatusCode()==200)
+        {
+
+            var_dump($data);
+            return $data['listenKey'];
+        }
+
+    }
+
+    public function removeListenKey($key)
+    {
+        $response = $this->request("v1", "DELETE", "userDataStream",['listenKey'=>$key]);
+
+        $data = json_decode((string)$response->getBody(), true);
+
+        if($response->getStatusCode()==200)
+        {
+
+            var_dump($data);
+        }
+
+    }
+
+    public function pingListenKey($key)
+    {
+        $response = $this->request("v1", "PUT", "userDataStream",['listenKey'=>$key]);
+        $data = json_decode((string)$response->getBody(), true);
+        return $data;
+
+    }
+
+    private function getProxy()
+    {
+        if(!static::$proxyList){
+            $file = __DIR__ . "/../../public/proxy.data";
+            static::$proxyList = $data = unserialize(file_get_contents($file));
+        }
+
+        $proxy = array_shift(static::$proxyList);
+        array_push(static::$proxyList, $proxy);
+        $proxy = $proxy;
+        $p = parse_url($proxy);
+        return $proxy;
+    }
+
     public function request( $version, $method,  $action, array $params)
     {
 
         $dataToSend = [];
-        $params['timestamp'] = number_format(microtime(true) * 1000, 0, '.', '');
-        $query = http_build_query($params, '', '&');
+        $bparams = [];
+
+        foreach ($params as $k=>$v)
+        {
+            $bparams[$k]=$v;
+        }
+
+        $bparams['timestamp'] = number_format(microtime(true) * 1000 - 4000 , 0, '.', '');
+
+        $query = http_build_query($bparams, '', '&');
         $signature = hash_hmac('sha256', $query, $this->secretKey);
-        $params['signature'] = $signature;
+        $bparams['signature'] = $signature;
+
+        $dataToSend['proxy'] = $this->getProxy();
+        $dataToSend['verify'] = false;
+
 
         $dataToSend['headers'] =
             [
@@ -215,11 +529,17 @@ class Client implements ClientInterface
 
         if(strtolower($method) !== "get")
         {
-            $dataToSend['form_params'] = $params;
+            if(!empty($params))
+              $dataToSend['form_params'] = $bparams;
+
+            if($version === 'v1')
+            {
+                $dataToSend['form_params'] = $params;
+            }
         }
         else
         {
-            $dataToSend['query'] = $params;
+            $dataToSend['query'] = $bparams;
         }
 
 

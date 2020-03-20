@@ -5,6 +5,7 @@ namespace Crypto\Bot;
 
 
 use Crypto\Exchange\Order;
+use Crypto\HitBTC\Client;
 
 class BotFactory
 {
@@ -15,17 +16,16 @@ class BotFactory
         $bot->circles = $retry;
 
         $inOrder = new Order();
-        $inOrder->side = 'buy';
+        $inOrder->side = $volume > 0 ? 'buy' : 'sell';
         $inOrder->pairID = $pairID;
         $inOrder->price = $buyPrice;
-        $inOrder->value = $volume;
+        $inOrder->value = abs($volume);
 
         $bot->inOrder = $inOrder;
 
         $outOrder = clone $inOrder;
-        $outOrder -> side = 'sell';
-        $outOrder->price += $deltaPrice;
-
+        $outOrder->side = $volume > 0 ? 'sell' : 'buy';
+        $outOrder->price += ( $volume <=> 0 ) * abs($deltaPrice);
         $bot->outOrder = $outOrder;
 
         if($botID !== null)
@@ -48,14 +48,33 @@ class BotFactory
      * @param float $deltaPrice
      * @param int $count
      * @return CircleBot[]
+     * @throws \Exception
      */
     public static function spreadAttack(string $pairID, float $lVolume, float $buyPrice, float $priceStep, float $deltaPrice, int $count)
     {
         $result = [];
         for($i=0; $i<$count; $i++)
         {
-            $price = $buyPrice - ($priceStep * $i);
-            $bot = self::simple($pairID, $lVolume, $price, $deltaPrice, $i+1 );
+            $price = $buyPrice - ( $lVolume <=> 0 ) * ($priceStep * $i);
+            $bot = self::simple($pairID, $lVolume, $price, $deltaPrice, 100);
+            $bot->id = "spread_".$bot->id;
+            $result[] = $bot;
+        }
+        return $result;
+    }
+
+    public static function spreadAttackEx(string $pairID, float $lVolume, float $buyPrice, float $priceStep, float $deltaPrice, int $count)
+    {
+        $priceStep = $priceStep / 100;
+        $deltaPrice = $deltaPrice / 100;
+
+        $result = [];
+        for($i=0; $i<$count; $i++)
+        {
+            $pStep = ($price ?? $buyPrice) * $priceStep;
+            $price = ($price ?? $buyPrice) - ( $lVolume <=> 0 ) * $pStep;
+            $dPrice = $price * $deltaPrice;
+            $bot = self::simple($pairID, $lVolume, $price, $dPrice, 100);
             $bot->id = "spread_".$bot->id;
             $result[] = $bot;
         }
@@ -72,6 +91,43 @@ class BotFactory
             $bot->id = "spreadStatic_".$bot->id;
             $result[] = $bot;
         }
+        return $result;
+    }
+
+    public static function spreadMartinSV(float $buyPrice, Client $client)
+    {
+        $pairID = "BCHSVUSD";
+
+        $balance = $client->getNonZeroBalance()['USD']->available;
+        $balance = 600;
+        $lVolume=0.1;
+        $priceStep=0.1;
+        $tp = 1;
+
+        $result = [];
+
+        $i=0;
+        $price = $buyPrice - ($priceStep * $i);
+
+        while($balance > $price * $lVolume){
+            $i++;
+
+            $bot = self::simple($pairID, $lVolume, $price, $tp, $i );
+
+            var_dump(" ({$bot->inOrder->value}) {$bot->inOrder->price} => {$bot->outOrder->price}");
+
+            $bot->id = "spreadStatic_".$bot->id;
+            $lVolume += 0.1;
+            $balance -= $price * $lVolume;
+            $priceStep += 0.1;
+            $tp += 0.05;
+            $price = $buyPrice - ($priceStep * $i);
+            $result[] = $bot;
+
+        };
+
+        var_dump($i);
+
         return $result;
     }
 }

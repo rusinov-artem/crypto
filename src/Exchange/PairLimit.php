@@ -13,4 +13,5 @@ class PairLimit
     public $takeLiquidityRate;
     public $provideLiquidityRate;
     public $feeCurrency;
+    public $minNotional;
 }

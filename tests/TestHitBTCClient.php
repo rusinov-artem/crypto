@@ -15,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 
 class TestHitBTCClient extends TestCase
 {
+
     /**
      * @var Client
      */
@@ -74,7 +75,8 @@ class TestHitBTCClient extends TestCase
     {
         $order = $this->client->createOrder($this->miniOrder);
         $this->assertTrue('new' === $order->status);
-        $this->assertNotNull($order->id);
+        $this->assertNotNull($order->eClientOrderID);
+        $this->assertNotNull($order->eOrderID);
         $this->assertTrue($order instanceof Order);
         $this->client->closeOrder($order);
     }
@@ -84,11 +86,13 @@ class TestHitBTCClient extends TestCase
         $order = $this->client->createOrder($this->miniOrder);
         $o = $this->client->closeOrder($order);
         $this->assertTrue('canceled' === $order->status);
-        $this->assertNotNull($order->id);
+        $this->assertNotNull($order->eClientOrderID);
+        $this->assertNotNull($order->eOrderID);
         $this->assertTrue($order instanceof Order);
 
         $this->assertTrue('canceled' === $o->status);
-        $this->assertNotNull($o->id);
+        $this->assertNotNull($o->eClientOrderID);
+        $this->assertNotNull($o->eOrderID);
         $this->assertTrue($o instanceof Order);
     }
 
@@ -98,24 +102,24 @@ class TestHitBTCClient extends TestCase
         $orders = $this->client->getActiveOrders();
         $this->assertGreaterThan(0, $this->count($orders));
         $this->assertTrue(current($orders) instanceof Order);
-        $this->assertArrayHasKey($order->id, $orders);
+        $this->assertArrayHasKey($order->eClientOrderID, $orders);
         $this->client->closeOrder($order);
     }
 
     public function testCheckOrderIsActive()
     {
         $order = $this->client->createOrder($this->miniOrder);
-        $this->assertTrue($this->client->checkOrderIsActive($order));
+        $this->assertTrue($this->client->checkOrderIsActive($order, true));
         $this->client->closeOrder($order);
-        $this->assertTrue(!$this->client->checkOrderIsActive($order));
+        $this->assertTrue(!$this->client->checkOrderIsActive($order, true));
     }
 
     public function testOrderGetStatus()
     {
         $order = $this->client->createOrder($this->miniOrder);
-        $this->assertEquals('new',$this->client->getOrderStatus($order));
+        $this->assertEquals('new',$this->client->getOrderStatus($order, true));
         $this->client->closeOrder($order);
-        $this->assertEquals('canceled',$this->client->getOrderStatus($order));
+        $this->assertTrue(in_array($this->client->getOrderStatus($order, true), ['canceled', 'unknown']));
     }
 
     public function testGetAccountTrades()
@@ -150,6 +154,56 @@ class TestHitBTCClient extends TestCase
             return false;
         });
         $this->assertTrue($count>=0);
+    }
+
+    public function test_preloaded_trades()
+    {
+        $orders = $this->client->getActiveOrders();
+
+        $tClient = new class($this->client) extends Client{
+
+            private $client;
+            public $counter = 0;
+
+            public function __construct(Client $client)
+            {
+                $this->client = $client;
+            }
+
+            public function request($method, $action, array $params)
+            {
+                if($action === 'history/trades')
+                {
+                    $this->counter++;
+                }
+
+                return $this->client->request($method, $action, $params);
+            }
+
+            public function __call($name, $arguments)
+            {
+               return call_user_func_array([$this->client, $name], $arguments);
+            }
+
+            public function __get($name)
+            {
+               return $this->client->$name;
+            }
+        };
+
+
+        $pairs = [];
+        foreach ($orders as $order)
+        {
+            $pairs[$order->pairID] = 1;
+            $tClient->loadTrades($order->pairID);
+            $tClient->getOrderTrades($order);
+        }
+
+        var_dump(count($pairs));
+        var_dump($tClient->counter);
+
+        $this->assertEquals(count($pairs), $tClient->counter);
     }
 
 
