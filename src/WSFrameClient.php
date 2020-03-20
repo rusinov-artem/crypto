@@ -149,7 +149,7 @@ class WSFrameClient
                 STREAM_CLIENT_CONNECT,
                 $context
             );
-            $r = stream_socket_enable_crypto($this->socket, true, SSL_VERSION_TLSv1_2);
+            $r = stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_ANY_CLIENT);
         }
 
 
@@ -262,6 +262,7 @@ class WSFrameClient
         if($frame->opcode === 0x9)
         {
             $r = $this->pong();
+            var_dump("Ping Pong $r");
         }
 
         m1:

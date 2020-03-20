@@ -265,13 +265,6 @@ $r = socket_get_status($socket);
 
 var_dump("___________________________");
 
-$base = new EventBase();
-$dns_base = new EventDnsBase($base, TRUE);
-
-$refl = new ReflectionClass(EventSslContext::class);
-$c = $refl->getConstants();
-
-
 while(1)
 {
     try{

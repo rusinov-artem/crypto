@@ -63,6 +63,24 @@ class BotFactory
         return $result;
     }
 
+    public static function spreadAttackEx(string $pairID, float $lVolume, float $buyPrice, float $priceStep, float $deltaPrice, int $count)
+    {
+        $priceStep = $priceStep / 100;
+        $deltaPrice = $deltaPrice / 100;
+
+        $result = [];
+        for($i=0; $i<$count; $i++)
+        {
+            $pStep = ($price ?? $buyPrice) * $priceStep;
+            $price = ($price ?? $buyPrice) - ( $lVolume <=> 0 ) * $pStep;
+            $dPrice = $price * $deltaPrice;
+            $bot = self::simple($pairID, $lVolume, $price, $dPrice, 100);
+            $bot->id = "spread_".$bot->id;
+            $result[] = $bot;
+        }
+        return $result;
+    }
+
     public static function spreadAttackStatic(string $pairID, float $lVolume, float $buyPrice, float $priceStep, float $deltaPrice, int $count, int $r = 3)
     {
         $result = [];

@@ -166,7 +166,7 @@ class Listener
                 $frame = null;
                 $this->log(exceptionToString($t));
                 $this->reinit();
-                $this->log("inited");
+                $this->log("Reinit Queued");
                 return;
             }
 
