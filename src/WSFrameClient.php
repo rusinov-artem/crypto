@@ -100,9 +100,9 @@ class WSFrameClient
         $context = stream_context_create();
         stream_context_set_option($context, 'ssl', 'verify_host', false);
         stream_context_set_option($context, 'ssl', 'cafile', $this->casertPath);
-        stream_context_set_option($context, 'ssl', 'verify_peer', false);
+        stream_context_set_option($context, 'ssl', 'verify_peer', true);
         stream_context_set_option($context, 'ssl', 'verify_peer_name', false);
-        stream_context_set_option($context, 'ssl', 'allow_self_signed', true);
+        //stream_context_set_option($context, 'ssl', 'allow_self_signed', true);
 
 
 
@@ -150,6 +150,7 @@ class WSFrameClient
                 $context
             );
             $r = stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_ANY_CLIENT);
+            var_dump("encription {$r}");
         }
 
 
@@ -182,6 +183,7 @@ class WSFrameClient
         $k= [];
         //stream_set_blocking($this->socket,true);
         $r =  fread($this->socket, 40960);
+        $eof=feof($this->socket);
         //stream_set_blocking($this->socket,false);
         if(false === $r){
             throw  new \Exception("Unable to fread", -1);
@@ -197,7 +199,21 @@ class WSFrameClient
     public function send($message)
     {
         echo "SEND $message\n";
-        $message = $this->encode($message);
+
+        $frame = new WSFrame();
+        $frame->fin = 1;
+        $frame->opcode = 1;
+        $frame->dataLength = strlen($message);
+        $frame->mask = 1;
+        $frame->generateMask();
+
+        $frame->rawData = $message;
+        $message = $frame->encode();
+
+        $frameT = new WSFrame();
+        $frameT->initHeaderInfo($message);
+        $rawData = substr($message, $frame->offset, $frame->dataLength);
+
         return $r = fwrite($this->socket, $message, strlen($message));
     }
 

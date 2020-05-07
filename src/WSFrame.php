@@ -132,4 +132,63 @@ class WSFrame
 
     }
 
+    public function encode(){
+        $result = "";
+
+        $result .= "10000001";
+        $result .= $this->mask;
+
+
+        $lenPart = [];
+        $len = strlen($this->rawData);
+        if($len < 126){
+            $result .= str_pad(decbin($len), 7, '0', STR_PAD_LEFT);
+        }
+        elseif($len >= 126 && $len < pow(2, 16)){
+            $result .= str_pad(decbin(126), 7, '0', STR_PAD_LEFT);
+            $result .= str_pad(decbin($len), 16, '0', STR_PAD_LEFT);
+        }
+        elseif($len >= pow(2, 16)){
+            $result .= str_pad(decbin(127), 7, '0', STR_PAD_LEFT);
+            $result .= str_pad(decbin($len), 64, '0', STR_PAD_LEFT);
+        }
+
+        if($this->mask == 1){
+            foreach ($this->maskKey as $byte){
+                $result .= str_pad(decbin($byte), 8, '0',STR_PAD_LEFT);
+            }
+
+        }
+
+        $headerLen = strlen($result);
+
+        $header = "";
+
+        foreach (str_split($result, 8) as $byte)
+        {
+            $header .= chr(bindec($byte));
+        }
+
+        $data = "";
+        if($this->mask == 1){
+            for ($i = 0; $i < strlen($this->rawData); $i++) {
+                $data  .= chr(ord($this->rawData[$i]) ^ $this->maskKey[$i % 4]);
+            }
+        }else{
+            $data = $this->rawData;
+        }
+
+
+        return $header.$data;
+
+    }
+
+    public function generateMask()
+    {
+        $this->maskKey= [];
+        for($i = 0; $i < 4; $i++){
+            $this->maskKey[$i] =  rand(0, (pow(2,8) -1));
+        }
+    }
+
 }

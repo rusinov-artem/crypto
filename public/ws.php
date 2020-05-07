@@ -249,14 +249,18 @@ $message = "{
   }
 }";
 
-$client->send($message);
+
+
+//$message = '{ "method": "getCurrency", "params": {"currency": "ETH"}, "id": 123}';
+
+$r = $client->send($message);
 $frame = $client->getFrame();
 
-$message = "{ \"method\": \"getTradingBalance\", \"params\": {}, \"id\": 123 }";
-$client->send($message);
+$message = "{ \"method\": \"getTradingBalance\", \"params\": {}, \"id\": 1 }";
+$r = $client->send($message);
 
 $message = json_encode([ 'method'=>'subscribeReports', 'params'=>[], 'id'=>123, ]);
-$client->send($message);
+$r = $client->send($message);
 stream_set_timeout($client->socket, 10);
 stream_set_blocking($client->socket, false);
 main($hit, $bs, $logger, $botLogger);
@@ -272,6 +276,7 @@ while(1)
     }
     catch (\Exception $e)
     {
+        var_dump($e->getMessage());
         goto m2;
     }
 
