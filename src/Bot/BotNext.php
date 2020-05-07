@@ -235,11 +235,11 @@ class BotNext
 
         if($this->inOrder->side === 'buy' && $this->outOrder->side === 'sell')
         {
-            $profit = $outOrderV - $inOrderV - $this->inOrder->value * 0.001;
+            $profit = $outOrderV - $inOrderV;
         }
         elseif($this->inOrder->side === 'sell' && $this->outOrder->side === 'buy')
         {
-            $profit = $inOrderV - $outOrderV - $this->inOrder->value * 0.001;;
+            $profit = $inOrderV - $outOrderV;
         }
         else
         {

@@ -13,10 +13,10 @@
         "symfony/event-dispatcher": "^4.2",
         "monolog/monolog": "^1.24",
         "symfony/cache": "^4.2",
-        "doctrine/dbal": "^2.9",
+        "doctrine/dbal": "^2.10",
         "mustache/mustache": "~2.5",
-        "tuupola/base58":"^1.0",
-      "ext-event": "*"
+      "ext-event": "*",
+      "ext-json": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^7.4"
