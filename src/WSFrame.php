@@ -6,22 +6,16 @@ namespace Crypto;
 
 class WSFrame
 {
-    public $fin;
-    public $rsv1;
-    public $rsv2;
-    public $rsv3;
-    public $opcode;
-    public $mask;
-    public $maskKey;
-    public $dataLength;
-    public $rawData;
-    public $offset;
-    public $isReady;
-
-    public function setRawData($data)
-    {
-        $this->rawData = $data;
-    }
+    public int $fin;
+    public int $rsv1;
+    public int $rsv2;
+    public int $rsv3;
+    public int $opcode;
+    public int $mask;
+    public array $maskKey;
+    public int $dataLength;
+    public string $rawData;
+    public int $offset;
 
     public function getData()
     {
@@ -36,13 +30,13 @@ class WSFrame
         }
     }
 
+    public function init($str){
+        $this->initHeaderInfo($str);
+        $this->rawData = substr($str, $this->offset, $this->dataLength);
+    }
+
     public function initHeaderInfo($str)
     {
-        // x3,x2,x1,0
-        //x0 * 2^0 + x1 * 2^1 + x2 *2^2 + x3 * 2^3
-        // 1) разделить на 2, остаток это x0, результат от деления
-        // 2)
-
         $firstByteBinary = sprintf('%08b', ord($str[0]));
         $secondByteBinary = sprintf('%08b', ord($str[1]));
         $flags = substr($firstByteBinary, 0,4);
@@ -78,11 +72,8 @@ class WSFrame
         }
 
         $this->mask = ($secondByteBinary[0] == '1') ? true : false;
-        $r = decbin(ord($str[1]));
-        $r1 = decbin(127);
         $payloadLength = ord($str[1]) & 127;
 
-        $r3 = decbin(ord($str[1]) & 127);
         if ($payloadLength === 126) {
 
             if($this->mask)
@@ -128,59 +119,47 @@ class WSFrame
 
             $this->dataLength = $payloadLength;
         }
-
-
     }
 
     public function encode(){
-        $result = "";
 
-        $result .= "10000001";
-        $result .= $this->mask;
-
-
-        $lenPart = [];
+        $headerBits  = "1000";
+        $headerBits .= str_pad(bindec($this->opcode), 4, '0', STR_PAD_LEFT);
+        $headerBits .= $this->mask;
         $len = strlen($this->rawData);
         if($len < 126){
-            $result .= str_pad(decbin($len), 7, '0', STR_PAD_LEFT);
+            $headerBits .= str_pad(decbin($len), 7, '0', STR_PAD_LEFT);
         }
         elseif($len >= 126 && $len < pow(2, 16)){
-            $result .= str_pad(decbin(126), 7, '0', STR_PAD_LEFT);
-            $result .= str_pad(decbin($len), 16, '0', STR_PAD_LEFT);
+            $headerBits .= str_pad(decbin(126), 7, '0', STR_PAD_LEFT);
+            $headerBits .= str_pad(decbin($len), 16, '0', STR_PAD_LEFT);
         }
         elseif($len >= pow(2, 16)){
-            $result .= str_pad(decbin(127), 7, '0', STR_PAD_LEFT);
-            $result .= str_pad(decbin($len), 64, '0', STR_PAD_LEFT);
+            $headerBits .= str_pad(decbin(127), 7, '0', STR_PAD_LEFT);
+            $headerBits .= str_pad(decbin($len), 64, '0', STR_PAD_LEFT);
         }
 
         if($this->mask == 1){
             foreach ($this->maskKey as $byte){
-                $result .= str_pad(decbin($byte), 8, '0',STR_PAD_LEFT);
+                $headerBits .= str_pad(decbin($byte), 8, '0',STR_PAD_LEFT);
             }
-
         }
 
-        $headerLen = strlen($result);
-
         $header = "";
-
-        foreach (str_split($result, 8) as $byte)
+        foreach (str_split($headerBits, 8) as $byte)
         {
             $header .= chr(bindec($byte));
         }
 
         $data = "";
-        if($this->mask == 1){
+        if( 1 == $this->mask){
             for ($i = 0; $i < strlen($this->rawData); $i++) {
                 $data  .= chr(ord($this->rawData[$i]) ^ $this->maskKey[$i % 4]);
             }
         }else{
             $data = $this->rawData;
         }
-
-
         return $header.$data;
-
     }
 
     public function generateMask()

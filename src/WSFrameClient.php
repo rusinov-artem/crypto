@@ -181,10 +181,7 @@ class WSFrameClient
     {
         $s = [$this->socket];
         $k= [];
-        //stream_set_blocking($this->socket,true);
         $r =  fread($this->socket, 40960);
-        $eof=feof($this->socket);
-        //stream_set_blocking($this->socket,false);
         if(false === $r){
             throw  new \Exception("Unable to fread", -1);
         }
@@ -206,28 +203,10 @@ class WSFrameClient
         $frame->dataLength = strlen($message);
         $frame->mask = 1;
         $frame->generateMask();
-
         $frame->rawData = $message;
         $message = $frame->encode();
 
-        $frameT = new WSFrame();
-        $frameT->initHeaderInfo($message);
-        $rawData = substr($message, $frame->offset, $frame->dataLength);
-
         return $r = fwrite($this->socket, $message, strlen($message));
-    }
-
-    private function encode($text)
-    {
-        $b = 129; // FIN + text frame
-        $len = strlen($text);
-        if ($len < 126) {
-            return pack('CC', $b, $len) . $text;
-        } elseif ($len < 65536) {
-            return pack('CCn', $b, 126, $len) . $text;
-        } else {
-            return pack('CCNN', $b, 127, 0, $len) . $text;
-        }
     }
 
     public function pong()
@@ -281,44 +260,35 @@ class WSFrameClient
             var_dump("Ping Pong $r");
         }
 
-        m1:
-        if(strlen($str) > $frame->offset + $frame->dataLength)
-        {
-            $rawData = substr($str, $frame->offset, $frame->dataLength);
-            $this->currentStr = substr($str, $frame->offset + $frame->dataLength);
-            $frame->rawData = $rawData;
-            return $frame;
-        }
-        elseif(strlen($str) == $frame->offset + $frame->dataLength)
-        {
-            $frame->rawData = substr($str, $frame->offset);
-            $this->currentStr = '';
-            return $frame;
-        }
-        elseif(strlen($str) < $frame->offset + $frame->dataLength)
-        {
-            do{
-
-                $data = $this->read();
-                $str .= $data;
-                $len = strlen($str);
-                $sum =  $frame->offset + $frame->dataLength;
-            }while( ($len < $sum) && (!feof($this->socket)));
-
-            $dt = (new \DateTime())->format("Y-m-d H:i:s");
-
-
-            if($len >= $sum){
-                goto m1;
-            }else
+        do{
+            if(strlen($str) > $frame->offset + $frame->dataLength)
             {
-                return false;
+                $rawData = substr($str, $frame->offset, $frame->dataLength);
+                $this->currentStr = substr($str, $frame->offset + $frame->dataLength);
+                $frame->rawData = $rawData;
+                return $frame;
             }
+            elseif(strlen($str) == $frame->offset + $frame->dataLength)
+            {
+                $frame->rawData = substr($str, $frame->offset);
+                $this->currentStr = '';
+                return $frame;
+            }
+            elseif(strlen($str) < $frame->offset + $frame->dataLength)
+            {
+                do{
+                    $data = $this->read();
+                    $str .= $data;
+                    $len = strlen($str);
+                    $sum =  $frame->offset + $frame->dataLength;
+                }while( ($len < $sum) && (!feof($this->socket)));
 
-
-
-        }
-
+                if($len < $sum){
+                   return false;
+                }
+            }
+            var_dump("While alert");
+        }while(1);
     }
 
     public function onFrameReady($callbackName, callable $callback ){

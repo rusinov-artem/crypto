@@ -261,8 +261,8 @@ $r = $client->send($message);
 
 $message = json_encode([ 'method'=>'subscribeReports', 'params'=>[], 'id'=>123, ]);
 $r = $client->send($message);
-stream_set_timeout($client->socket, 10);
-stream_set_blocking($client->socket, false);
+stream_set_timeout($client->socket, 90);
+stream_set_blocking($client->socket, true);
 main($hit, $bs, $logger, $botLogger);
 
 $r = socket_get_status($socket);
@@ -309,5 +309,5 @@ while(1)
     $a = 0;
 }
 
-
+socket_shutdown($socket);
 fclose($socket);
