@@ -12,7 +12,7 @@ $hit = new \Crypto\HitBTC\Client($config['hitbtc.api.key'], $config['hitbtc.api.
 //$pair = "BCHSVUSD";
 //$pair = "EDOUSD";
 //$pair = "BTCUSD";
-$pair = "EOSUSD";
+//$pair = "EOSUSD";
 //$pair = "ETHUSD";
 //$pair = "TRXUSD";
 //$pair = "PBTTBTC";
@@ -20,7 +20,7 @@ $pair = "EOSUSD";
 //$pair = "USDUSDC";
 //$pair = 'CLOUSD';
 //$pair = 'DOGEUSD';
-//$pair = 'XRPUSDT';
+$pair = 'XRPUSDT';
 //$pair = 'XLMUSD';
 //$pair = "DASHUSD";
 //$pair = 'BTTUSD';
@@ -36,7 +36,7 @@ $pair = "EOSUSD";
 
 //edo ada eos xrp xlm ltc
 
-$bPrice = 2.8;
+$bPrice = 0.224559;
 //$sPrice = 8800.86;
 
 //$bot = BotFactory::simple($pair, 0.00002, $bPrice, $bPrice - $sPrice, 1);
@@ -44,14 +44,10 @@ $bPrice = 2.8;
 ////$bs->saveBot($bot);
 //die();
 
-$bots = BotFactory::spreadAttackEx($pair, -0.03, $bPrice, 0.24, 4, 250);
+$bots = BotFactory::spreadAttackEx($pair, -0.1, $bPrice, 1, 15, 65);
 foreach($bots as $bot){
     $bs->saveBot($bot);
     var_dump("{$bot->inOrder->price} - {$bot->outOrder->price}");
 };
 
 var_dump($pair, $bPrice);
-
-
-
-
